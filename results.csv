@@ -1,0 +1,27 @@
+chemical,group,dataset,heavy_atoms,score,asp25_min_dist,asp25_contacts
+nelfinavir,HIV drug,development,40,-11.016,2.70,4
+indinavir,HIV drug,development,45,-11.224,2.71,4
+saquinavir,HIV drug,development,49,-11.015,2.89,4
+darunavir,HIV drug,development,38,-9.458,2.56,4
+amprenavir,HIV drug,development,35,-8.678,2.71,4
+imatinib,decoy,development,37,-9.985,4.25,0
+atorvastatin,decoy,development,41,-9.334,3.17,1
+sildenafil,decoy,development,33,-8.948,3.16,3
+warfarin,decoy,development,23,-7.950,2.69,1
+loratadine,decoy,development,27,-6.633,5.07,0
+ibuprofen,control,development,15,-6.913,3.08,5
+aspirin,control,development,13,-5.776,6.82,0
+caffeine,control,development,14,-5.391,4.74,0
+acetaminophen,control,development,11,-5.322,2.80,1
+lopinavir,HIV drug,independent test,46,-10.632,2.79,4
+ritonavir,HIV drug,independent test,50,-9.150,2.71,2
+atazanavir,HIV drug,independent test,51,-10.298,2.84,4
+tipranavir,HIV drug,independent test,42,-9.782,2.95,1
+rosuvastatin,decoy,independent test,33,-8.516,4.88,0
+losartan,decoy,independent test,30,-8.288,4.42,0
+celecoxib,decoy,independent test,26,-8.603,4.21,0
+sertraline,decoy,independent test,20,-7.779,2.92,1
+carvedilol,decoy,independent test,30,-8.707,3.09,2
+glyburide,decoy,independent test,33,-9.533,3.22,1
+gefitinib,decoy,independent test,31,-8.698,2.78,2
+olanzapine,decoy,independent test,22,-8.949,3.50,1
