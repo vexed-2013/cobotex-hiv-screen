@@ -302,86 +302,221 @@ ANIM = """
 <script>
 // step __STEP__
 (function () {
-  var targets = [];
-  function show(t) {
-    var s = t.el.style; s.transition = "none"; s.opacity = "1"; s.transform = "none";
-    if (t.parts) t.parts.forEach(function (p) { p.node.textContent = p.text; });
+  var items = [];
+  function showAll() {
+    items.forEach(function (it) {
+      it.el.style.opacity = "1";
+      if (it.parts) it.parts.forEach(function (p) { p.node.textContent = p.text; });
+    });
   }
   try {
     var P = window.parent, D = P.document;
     if (P.matchMedia && P.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    var FULL = "__FULL__" === "1";
+    var FULL = "__FULL__" === "1", STEP = parseInt("__STEP__", 10);
     var run = (P.__buildRun = (P.__buildRun || 0) + 1);
     var old = D.getElementById("agent-layer"); if (old) old.remove();
     var main = D.querySelector('[data-testid="stMainBlockContainer"]') || D.querySelector(".block-container");
     var vb = main && main.querySelector('[data-testid="stVerticalBlock"]');
     if (!vb) return;
     var me = window.frameElement;
+
+    // ---- 1. find the pieces of the page, in order from the top ----
+    function add(kind, el, x) {
+      var it = {kind: kind, el: el, parts: null, first: false};
+      for (var k in x) it[k] = x[k];
+      items.push(it);
+    }
     Array.prototype.forEach.call(vb.children, function (ch) {
       if (me && ch.contains(me)) return;
-      if (!FULL && ch.querySelector(".hero, [class*='st-key-stepbtn_'], [class*='st-key-nav']")) return;
-      var hero = ch.querySelector(".hero"), cards = ch.querySelectorAll(".card");
+      var hero = ch.querySelector(".hero");
+      var chrome = hero || ch.querySelector("[class*='st-key-stepbtn_'], [class*='st-key-nav']");
+      if (chrome && !FULL) return;
+      var cards = ch.querySelectorAll(".card");
       if (hero) {
         var parts = [];
-        hero.querySelectorAll(".eyebrow, h1, p").forEach(function (n) { parts.push({node: n, text: n.textContent}); n.textContent = ""; });
-        targets.push({el: hero, parts: parts});
+        hero.querySelectorAll(".eyebrow, h1, p").forEach(function (n) {
+          var p = {node: n, text: n.textContent, a: D.createTextNode(""), s: D.createElement("span")};
+          p.s.style.opacity = "0"; p.s.textContent = p.text;
+          n.textContent = ""; n.appendChild(p.a); n.appendChild(p.s);
+          parts.push(p);
+        });
+        add("hero", hero, {parts: parts, first: true});
+      } else if (chrome) {
+        ch.querySelectorAll("button").forEach(function (b) { add("tap", b, {first: true}); });
       } else if (cards.length) {
-        cards.forEach(function (c) { targets.push({el: c}); });
-      } else { targets.push({el: ch}); }
+        cards.forEach(function (c) { add("box", c); });
+        ch.querySelectorAll("iframe").forEach(function (f) { if (f !== me) add("box", f); });
+      } else if (ch.querySelector('[data-testid="stPlotlyChart"], [data-testid="stDataFrame"], iframe')) {
+        add("box", ch);
+      } else if (ch.querySelector("h3, .setname")) {
+        add("wipe", ch);
+      } else if (ch.querySelector('[data-testid="stSlider"], [data-testid="stSelectbox"]')) {
+        add("tap", ch);
+      } else if (ch.querySelector(".foot")) {
+        add("fade", ch);
+      } else if (ch.querySelectorAll("p, li").length) {
+        ch.querySelectorAll("p, li").forEach(function (n) {
+          if (!(n.tagName === "P" && n.closest("li"))) add("line", n);
+        });
+      } else { add("fade", ch); }
     });
-    targets.forEach(function (t) {
-      var s = t.el.style; s.animation = "none"; s.transition = "none"; s.opacity = "0"; s.transform = "translateY(12px)";
+    items.forEach(function (it) { it.el.style.animation = "none"; it.el.style.opacity = "0"; });
+
+    // ---- 2. measure everything while it is hidden (opacity does not move layout) ----
+    var W = P.innerWidth, H = P.innerHeight;
+    function textRect(el) {
+      var g = D.createRange(); g.selectNodeContents(el);
+      var q = g.getBoundingClientRect();
+      return q.width > 0 ? q : el.getBoundingClientRect();
+    }
+    items.forEach(function (it) {
+      var r = it.kind === "line" ? textRect(it.el)
+            : it.kind === "wipe" ? textRect(it.el.querySelector("h3, .setname") || it.el)
+            : it.el.getBoundingClientRect();
+      it.r = r; it.area = r.width * r.height;
+      it.vis = r.width > 0 && r.bottom > 6 && r.top < H - 6;
+      it.V = {left: Math.max(r.left, 6), top: Math.max(r.top, 6), right: Math.min(r.right, W - 6), bottom: Math.min(r.bottom, H - 6)};
     });
 
+    // ---- 3. one choreography per screen ----
+    var CFG = [
+      {from: "L", corner: 0, lanes: 6, mode: 0},   // Validate: from the left, document order
+      {from: "R", corner: 1, lanes: 4, mode: 1},   // Screen: from the right, biggest blocks first
+      {from: "B", corner: 2, lanes: 5, mode: 2},   // Test: from the bottom, text builds bottom-up
+      {from: "T", corner: 3, lanes: 6, mode: 3}    // Explore: from the top, right column first
+    ][STEP] || {from: "L", corner: 0, lanes: 5, mode: 0};
+    var fixed = items.filter(function (i) { return i.first; });
+    var rest = items.filter(function (i) { return !i.first; });
+    var wp = rest.filter(function (i) { return i.kind === "wipe"; });
+    var bx = rest.filter(function (i) { return i.kind === "box"; });
+    var ot = rest.filter(function (i) { return i.kind !== "wipe" && i.kind !== "box"; });
+    if (CFG.mode === 1) bx.sort(function (a, b) { return b.area - a.area; });
+    if (CFG.mode === 2) ot.reverse();
+    if (CFG.mode === 3) bx.sort(function (a, b) { return b.r.left - a.r.left; });
+    var order = fixed.concat(CFG.mode === 0 ? rest : wp.concat(bx, ot));
+
+    // ---- 4. cursor layer and effect helpers ----
     var layer = D.createElement("div"); layer.id = "agent-layer";
     layer.style.cssText = "position:fixed;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:99999;overflow:hidden";
     D.body.appendChild(layer);
     function cleanup() { var l = D.getElementById("agent-layer"); if (l) l.remove(); }
-    setTimeout(function () { if (run === P.__buildRun) { targets.forEach(show); cleanup(); } }, 15000);
+    P.setTimeout(function () { if (run === P.__buildRun) { showAll(); cleanup(); } }, 12000);
 
     var COLORS = ["#F97316", "#22D3EE", "#A78BFA", "#FACC15", "#F472B6", "#60A5FA"];
     var ARROW = '<svg width="22" height="22" viewBox="0 0 24 24"><path d="M3 2l18 8-8 3-3 8z" fill="COL" stroke="#fff" stroke-width="1.5" stroke-linejoin="round"/></svg>';
-    var next = 0, active = COLORS.length;
-
-    function typeParts(parts, done) {
-      var i = 0;
-      (function nextPart() {
-        if (i >= parts.length) return done();
-        var p = parts[i++], k = 0;
-        var iv = setInterval(function () {
-          if (run !== P.__buildRun) { clearInterval(iv); return; }
-          k += 2; p.node.textContent = p.text.slice(0, k);
-          if (k >= p.text.length) { clearInterval(iv); nextPart(); }
-        }, 16);
-      })();
-    }
-    function reveal(t, done) {
-      var s = t.el.style;
-      s.transition = "opacity .5s ease, transform .5s ease"; s.opacity = "1"; s.transform = "none";
-      if (t.parts) typeParts(t.parts, done); else setTimeout(done, 450);
-    }
-    function work(c) {
-      if (run !== P.__buildRun) return;
-      if (next >= targets.length) {
-        c.style.opacity = "0";
-        if (--active === 0) setTimeout(cleanup, 900);
-        return;
-      }
-      var t = targets[next++], r = t.el.getBoundingClientRect();
-      var x = Math.min(Math.max(r.left + r.width * (0.25 + Math.random() * 0.5), 8), P.innerWidth - 30);
-      var y = Math.min(Math.max(r.top + Math.min(r.height, 80) * 0.5, 8), P.innerHeight - 30);
-      c.style.transform = "translate(" + x + "px," + y + "px)";
-      setTimeout(function () { reveal(t, function () { work(c); }); }, 800);
-    }
-    COLORS.forEach(function (col, a) {
-      var c = D.createElement("div");
-      c.style.cssText = "position:absolute;left:0;top:0;transition:transform .8s cubic-bezier(.45,.05,.25,1),opacity .6s";
-      c.innerHTML = ARROW.replace("COL", col);
-      c.style.transform = "translate(" + Math.random() * P.innerWidth + "px," + (P.innerHeight * 0.5 + Math.random() * P.innerHeight * 0.5) + "px)";
-      layer.appendChild(c);
-      setTimeout(function () { work(c); }, 300 + a * 220);
+    var cur = COLORS.slice(0, CFG.lanes).map(function (col, i) {
+      var f = (i + 1) / (CFG.lanes + 1), c = D.createElement("div");
+      var x = CFG.from === "L" ? -30 : CFG.from === "R" ? W + 30 : W * f;
+      var y = CFG.from === "T" ? -30 : CFG.from === "B" ? H + 30 : H * f;
+      c.style.cssText = "position:absolute;left:-3px;top:-2px;transform:translate(" + x + "px," + y + "px)";
+      c.innerHTML = ARROW.replace("COL", col); layer.appendChild(c);
+      return {el: c, x: x, y: y};
     });
-  } catch (e) { targets.forEach(show); }
+    var EASE = "cubic-bezier(.45,0,.2,1)";
+    var COLL = ["inset(-5px 100% 100% -5px)", "inset(-5px -5px 100% 100%)", "inset(100% 100% -5px -5px)", "inset(100% -5px -5px 100%)"];
+
+    function move(L, x, y, ms) {
+      var c = cur[L], tf = "translate(" + x + "px," + y + "px)";
+      c.el.animate([{transform: "translate(" + c.x + "px," + c.y + "px)"}, {transform: tf}], {duration: ms, easing: EASE});
+      c.x = x; c.y = y; c.el.style.transform = tf;
+    }
+    function pop(el, ms) {
+      el.style.opacity = "1";
+      el.animate([{opacity: 0, transform: "scale(.96)"}, {opacity: 1, transform: "none"}], {duration: ms, easing: "ease-out"});
+    }
+    function wipe(el, ms, axis) {
+      el.style.opacity = "1";
+      el.animate([{clipPath: axis === "y" ? "inset(0 0 100% 0)" : "inset(0 100% 0 0)"}, {clipPath: "inset(0 0 0 0)"}], {duration: ms, easing: EASE});
+    }
+    function ripple(x, y) {
+      var d = D.createElement("div");
+      d.style.cssText = "position:absolute;width:28px;height:28px;border-radius:50%;border:2px solid #3B82F6;left:" + (x - 14) + "px;top:" + (y - 14) + "px";
+      layer.appendChild(d);
+      d.animate([{transform: "scale(.3)", opacity: 0.9}, {transform: "scale(1.4)", opacity: 0}], {duration: 380, easing: "ease-out"}).onfinish = function () { d.remove(); };
+    }
+    function mkBox(V) {
+      var b = D.createElement("div");
+      b.style.cssText = "position:absolute;box-sizing:border-box;border:1px solid #3B82F6;background:rgba(148,163,184,.28);left:" + V.left + "px;top:" + V.top + "px;width:" + (V.right - V.left) + "px;height:" + (V.bottom - V.top) + "px;clip-path:" + COLL[CFG.corner];
+      for (var i = 0; i < 4; i++) {
+        var h = D.createElement("i");
+        h.style.cssText = "position:absolute;width:7px;height:7px;box-sizing:border-box;background:#fff;border:1px solid #3B82F6;" + (i % 2 ? "right" : "left") + ":-4px;" + (i < 2 ? "top" : "bottom") + ":-4px";
+        b.appendChild(h);
+      }
+      layer.appendChild(b); return b;
+    }
+    function typeParts(parts, ms) {
+      var N = parts.reduce(function (s, p) { return s + p.text.length; }, 0), t0 = P.performance.now();
+      (function f(now) {
+        if (run !== P.__buildRun) return;
+        var n = N * Math.min(1, (now - t0) / ms);
+        parts.forEach(function (p) {
+          var k = Math.max(0, Math.min(p.text.length, Math.floor(n)));
+          p.a.nodeValue = p.text.slice(0, k); p.s.textContent = p.text.slice(k); n -= p.text.length;
+        });
+        if (now - t0 < ms) P.requestAnimationFrame(f);
+      })(t0);
+    }
+
+    // ---- 5. plan every move on one clock, then play it frame by frame ----
+    var evs = [], last = 0, free = cur.map(function () { return 0; });
+    var pp = cur.map(function (c) { return {x: c.x, y: c.y}; });
+    function at(t, fn) { evs.push({t: t, fn: fn}); }
+    order.forEach(function (it) {
+      var L = 0, i;
+      for (i = 1; i < free.length; i++) if (free[i] < free[L]) L = i;
+      var s = Math.max(free[L], last + 70), V = it.V, el = it.el, k = it.kind, from = pp[L];
+      var cx = (V.left + V.right) / 2, cy = (V.top + V.bottom) / 2;
+      last = s;
+      if (!it.vis || k === "fade") { at(s, function () { pop(el, 300); }); return; }
+      if (k === "box" || k === "hero") {
+        var c = [[V.left, V.top, V.right, V.bottom], [V.right, V.top, V.left, V.bottom],
+                 [V.left, V.bottom, V.right, V.top], [V.right, V.bottom, V.left, V.top]][CFG.corner];
+        var tr = 200 + Math.min(240, Math.hypot(from.x - c[0], from.y - c[1]) * 0.25);
+        var dr = 300 + Math.min(220, (V.right - V.left + V.bottom - V.top) * 0.18);
+        at(s, function () { move(L, c[0], c[1], tr); });
+        at(s + tr, function () {
+          it.box = mkBox(V);
+          it.box.animate([{clipPath: COLL[CFG.corner]}, {clipPath: "inset(-5px)"}], {duration: dr, easing: EASE, fill: "forwards"});
+          move(L, c[2], c[3], dr);
+        });
+        at(s + tr + dr, function () {
+          pop(el, 240);
+          it.box.animate([{opacity: 1}, {opacity: 0}], {duration: 300, delay: 60, fill: "forwards"});
+          P.setTimeout(function () { it.box.remove(); }, 450);
+          if (it.parts) typeParts(it.parts, 700);
+        });
+        pp[L] = {x: c[2], y: c[3]};
+        free[L] = s + tr + dr + (it.parts ? 700 : 80);
+      } else if (k === "tap") {
+        var t2 = 200 + Math.min(240, Math.hypot(from.x - cx, from.y - cy) * 0.25);
+        at(s, function () { move(L, cx, cy, t2); });
+        at(s + t2, function () { ripple(cx, cy); pop(el, 240); });
+        pp[L] = {x: cx, y: cy}; free[L] = s + t2 + 80;
+      } else {
+        var tall = V.bottom - V.top > 40;
+        var sx = V.left + 2, sy = tall ? V.top + 6 : cy, ex = tall ? V.right - 8 : V.right, ey = tall ? V.bottom - 6 : cy;
+        var t3 = 200 + Math.min(240, Math.hypot(from.x - sx, from.y - sy) * 0.25), d3 = 260 + Math.min(200, (V.right - V.left) * 0.25);
+        at(s, function () { move(L, sx, sy, t3); });
+        at(s + t3, function () { wipe(el, d3, tall ? "y" : "x"); move(L, ex, ey, d3); });
+        pp[L] = {x: ex, y: ey}; free[L] = s + t3 + d3;
+      }
+    });
+    var endT = Math.max.apply(null, free) + 150;
+    at(endT, function () { cur.forEach(function (c) { c.el.animate([{opacity: 1}, {opacity: 0}], {duration: 350, fill: "forwards"}); }); });
+    at(endT + 450, function () { showAll(); cleanup(); });
+    evs.sort(function (a, b) { return a.t - b.t; });
+
+    var T0 = null, idx = 0;
+    (function loop(now) {
+      if (run !== P.__buildRun) return;
+      if (T0 === null) T0 = now;
+      while (idx < evs.length && evs[idx].t <= now - T0) evs[idx++].fn();
+      if (idx < evs.length) P.requestAnimationFrame(loop);
+    })(P.performance.now());
+  } catch (e) {
+    showAll();
+    try { var l = window.parent.document.getElementById("agent-layer"); if (l) l.remove(); console.warn("build animation:", e); } catch (_) {}
+  }
 })();
 </script>
 """
