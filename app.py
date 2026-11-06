@@ -396,7 +396,7 @@ ANIM = """
         cards.forEach(function (c) { add("box", c); });
         ch.querySelectorAll("iframe").forEach(function (f) { if (f !== me) add("box", f); });
       } else if (ch.querySelector('[data-testid="stPlotlyChart"], [data-testid="stDataFrame"], iframe')) {
-        add("box", ch);
+        add("box", ch, {stretch: true, deep: "canvas, svg, iframe, [data-testid='stDataFrameResizable'], [data-testid='stDataFrame'], .js-plotly-plot, .plot-container, .svg-container"});
       } else if (ch.querySelector("h3, .setname")) {
         add("wipe", ch);
       } else if (ch.querySelector('[data-testid="stSlider"], [data-testid="stSelectbox"]')) {
@@ -421,10 +421,24 @@ ANIM = """
       var q = g.getBoundingClientRect();
       return q.width > 0 ? q : el.getBoundingClientRect();
     }
+    function fullRect(it) {
+      var r = it.el.getBoundingClientRect();
+      var L = r.left, T = r.top, R = r.right, B = r.bottom;
+      if (it.deep) {
+        it.el.querySelectorAll(it.deep).forEach(function (n) {
+          var q = n.getBoundingClientRect();
+          if (q.width > 0 && q.height > 0) {
+            L = Math.min(L, q.left); T = Math.min(T, q.top); R = Math.max(R, q.right); B = Math.max(B, q.bottom);
+          }
+        });
+      }
+      if (it.stretch) { var vr = vb.getBoundingClientRect(); L = vr.left; R = vr.right; }
+      return {left: L, top: T, right: R, bottom: B, width: R - L, height: B - T};
+    }
     function rectOf(it) {
       return it.kind === "line" ? textRect(it.el)
            : it.kind === "wipe" ? textRect(it.el.querySelector("h3, .setname") || it.el)
-           : it.el.getBoundingClientRect();
+           : fullRect(it);
     }
     // read where a piece is RIGHT NOW (called again just before every move)
     function fresh(it) {
@@ -505,9 +519,9 @@ ANIM = """
       layer.appendChild(d);
       d.animate([{transform: "scale(.3)", opacity: 0.9}, {transform: "scale(1.4)", opacity: 0}], {duration: 380, easing: "ease-out"}).onfinish = function () { d.remove(); };
     }
-    function mkBox(V) {
+    function mkBox() {
       var b = D.createElement("div");
-      b.style.cssText = "position:absolute;box-sizing:border-box;border:1px solid #3B82F6;background:rgba(148,163,184,.28);left:" + V.left + "px;top:" + V.top + "px;width:" + (V.right - V.left) + "px;height:" + (V.bottom - V.top) + "px;clip-path:" + COLL[CFG.corner];
+      b.style.cssText = "position:absolute;box-sizing:border-box;border:1px solid #3B82F6;background:rgba(148,163,184,.28);left:0;top:0;width:0;height:0";
       for (var i = 0; i < 4; i++) {
         var h = D.createElement("i");
         h.style.cssText = "position:absolute;width:7px;height:7px;box-sizing:border-box;background:#fff;border:1px solid #3B82F6;" + (i % 2 ? "right" : "left") + ":-4px;" + (i < 2 ? "top" : "bottom") + ":-4px";
@@ -515,6 +529,11 @@ ANIM = """
       }
       layer.appendChild(b); return b;
     }
+    function setBox(b, x1, y1, x2, y2) {
+      b.style.left = Math.min(x1, x2) + "px"; b.style.top = Math.min(y1, y2) + "px";
+      b.style.width = Math.abs(x2 - x1) + "px"; b.style.height = Math.abs(y2 - y1) + "px";
+    }
+    function ease(p) { return p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2; }
     function typeParts(parts, ms) {
       var N = parts.reduce(function (s, p) { return s + p.text.length; }, 0), t0 = P.performance.now();
       (function f(now) {
@@ -557,10 +576,15 @@ ANIM = """
         var dr = 300 + Math.min(220, (V.right - V.left + V.bottom - V.top) * 0.18);
         at(s, function () { var q = corners(fresh(it)); move(L, q[0], q[1], tr); });
         at(s + tr, function () {
-          var q = corners(fresh(it));
-          it.box = mkBox(it.V);
-          it.box.animate([{clipPath: COLL[CFG.corner]}, {clipPath: "inset(-5px)"}], {duration: dr, easing: EASE, fill: "forwards"});
-          move(L, q[2], q[3], dr);
+          var b = it.box = mkBox(), t0 = P.performance.now();
+          (function f(now) {
+            if (run !== P.__buildRun) return;
+            var p = Math.max(0, Math.min(1, (now - t0) / dr)), e = ease(p), q = corners(fresh(it));
+            var x = q[0] + (q[2] - q[0]) * e, y = q[1] + (q[3] - q[1]) * e, cc = cur[L];
+            setBox(b, q[0], q[1], x, y);
+            cc.x = x; cc.y = y; cc.el.style.transform = "translate(" + x + "px," + y + "px)";
+            if (p < 1) P.requestAnimationFrame(f);
+          })(t0);
         });
         at(s + tr + dr, function () {
           pop(el, 240);
