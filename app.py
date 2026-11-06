@@ -188,6 +188,95 @@ def show_viewer(name):
                "Drag to rotate, scroll to zoom.")
 
 
+
+# ---------- animated replay: cursors place each chemical on the board ----------
+INTRO = """
+<style>
+body {margin: 0; font-family: system-ui, sans-serif;}
+#stage {position: relative; height: 350px; border-radius: 12px; overflow: hidden; background: #0F2A1B;
+        display: flex; flex-direction: column;}
+#head {padding: 16px 20px 10px; color: #BEF264; font-family: monospace; font-size: 14px; letter-spacing: 1px; min-height: 18px;}
+#grid {display: flex; flex-wrap: wrap; gap: 8px; padding: 0 20px;}
+.tile {width: calc((100% - 48px) / 7); height: 40px; box-sizing: border-box; border: 1px dashed #3B5E48; border-radius: 8px;
+       display: flex; align-items: center; justify-content: center; color: #6B8F7A; font-size: 13px; font-weight: 600;
+       overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0 4px; transition: all .4s;}
+.tile.on {border-style: solid; color: #E8F5EC;}
+.cur {position: absolute; left: 0; top: 0; z-index: 5; pointer-events: none;
+      transition: transform 1s cubic-bezier(.45,.05,.25,1), opacity .6s;}
+#bar {margin: auto 0 14px 0; align-self: center; display: flex; align-items: center; gap: 12px; background: rgba(8,20,13,.92);
+      border: 1px solid #2F5A42; border-radius: 12px; padding: 8px 14px; color: #DCFCE7; font-size: 13px; max-width: 92%;}
+#prog {width: 90px; height: 4px; background: #2F5A42; border-radius: 2px; overflow: hidden; flex: none;}
+#fill {display: block; height: 100%; width: 0; background: #84CC16; transition: width .4s;}
+button {background: #1E3F2D; color: #DCFCE7; border: 1px solid #2F5A42; border-radius: 8px; padding: 4px 10px; cursor: pointer; font-size: 12px;}
+@media (max-width: 600px) {.tile {width: calc((100% - 24px) / 4); height: 28px; font-size: 11px;} #bar {font-size: 11px; gap: 8px;} #prog {width: 50px;}}
+</style>
+<div id="stage">
+  <div id="head"></div>
+  <div id="grid"></div>
+  <div id="bar"><span id="cnt"></span><span id="prog"><i id="fill"></i></span><button id="replay">Replay</button></div>
+</div>
+<script>
+const DATA = __DATA__;
+const COLORS = ["#F97316", "#22D3EE", "#A78BFA", "#FACC15", "#34D399", "#F472B6", "#60A5FA"];
+const GROUP = {"HIV drug": "#16A34A", "decoy": "#F59E0B", "control": "#94A3B8"};
+const ARROW = '<svg width="20" height="20" viewBox="0 0 24 24"><path d="M3 2l18 8-8 3-3 8z" fill="COL" stroke="#fff" stroke-width="1.5" stroke-linejoin="round"/></svg>';
+const stage = document.getElementById("stage"), grid = document.getElementById("grid");
+const fill = document.getElementById("fill"), cnt = document.getElementById("cnt"), head = document.getElementById("head");
+let tiles = [], cursors = [], next = 0, done = 0, run = 0, typer = null;
+
+function typeHead(text) {
+  clearInterval(typer); let i = 0; head.textContent = "";
+  typer = setInterval(function () {
+    i++; head.textContent = text.slice(0, i) + (i < text.length ? "\\u258D" : "");
+    if (i >= text.length) clearInterval(typer);
+  }, 35);
+}
+function build() {
+  const my = ++run;
+  grid.innerHTML = ""; cursors.forEach(function (c) { c.remove(); });
+  tiles = []; cursors = []; next = 0; done = 0; fill.style.width = "0%";
+  cnt.textContent = "0 / " + DATA.length + " placed";
+  DATA.forEach(function () {
+    const t = document.createElement("div"); t.className = "tile"; t.textContent = "...";
+    grid.appendChild(t); tiles.push(t);
+  });
+  typeHead("Placing " + DATA.length + " chemicals on the board...");
+  const sr = stage.getBoundingClientRect();
+  for (let a = 0; a < 7; a++) {
+    const c = document.createElement("div"); c.className = "cur";
+    c.innerHTML = ARROW.replace("COL", COLORS[a]);
+    c.style.transform = "translate(" + Math.random() * sr.width + "px," + Math.random() * sr.height + "px)";
+    stage.appendChild(c); cursors.push(c);
+    setTimeout(function () { work(c, my); }, 400 + a * 250);
+  }
+}
+function work(c, my) {
+  if (my !== run) return;
+  if (next >= DATA.length) { c.style.opacity = 0; return; }
+  const i = next++, t = tiles[i], r = t.getBoundingClientRect(), s = stage.getBoundingClientRect();
+  c.style.transform = "translate(" + (r.left - s.left + r.width * 0.6) + "px," + (r.top - s.top + r.height * 0.6) + "px)";
+  setTimeout(function () {
+    if (my !== run) return;
+    const col = GROUP[DATA[i].group] || "#94A3B8";
+    t.textContent = DATA[i].chemical; t.style.background = col + "33"; t.style.borderColor = col; t.classList.add("on");
+    done++; fill.style.width = (100 * done / DATA.length) + "%";
+    cnt.textContent = done + " / " + DATA.length + " placed";
+    if (done === DATA.length) { cnt.textContent = "All " + DATA.length + " placed · replay of stored results"; head.textContent = "Done."; }
+    setTimeout(function () { work(c, my); }, 200);
+  }, 1000);
+}
+document.getElementById("replay").onclick = build;
+build();
+</script>
+"""
+
+
+def show_intro():
+    recs = df[["chemical", "group"]].to_dict("records")
+    components.html(INTRO.replace("__DATA__", json.dumps(recs)), height=360)
+    st.caption("A replay of the stored results, not live docking. Each cursor places one chemical, "
+               "coloured by its true group: green = HIV drug, amber = decoy, grey = everyday control.")
+
 # ---------- step 1: validate ----------
 if step == 0:
     st.markdown("### Step 1: Does the pipeline find a known answer?")
@@ -203,6 +292,9 @@ within 0.93 Å of where the real experiment found it, well under the 2 Å limit.
 This is the easiest test, because the answer is already known. It shows that the pipeline works, but not
 yet that it can tell HIV drugs from other chemicals. That is the next step.
 """)
+
+    st.markdown("### Watch the screen run")
+    show_intro()
 
 # ---------- step 2: screen ----------
 elif step == 1:
