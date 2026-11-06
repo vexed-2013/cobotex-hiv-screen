@@ -68,6 +68,11 @@ header[data-testid="stHeader"] {background: transparent;}
 .card.bad .value {color: #C2410C;}
 .setname {font-size: 1rem; font-weight: 700; color: #14532D; margin: 6px 0;}
 .foot {color: #4B5F52; font-size: 0.8rem; margin-top: 30px; text-align: center;}
+.st-key-navback, .st-key-navnext {position: fixed; bottom: 22px; z-index: 1000; width: auto !important;}
+.st-key-navback {left: 24px;}
+.st-key-navnext {right: 24px;}
+.st-key-navback button, .st-key-navnext button {background: #FFFFFF; box-shadow: 0 4px 14px rgba(20,83,45,0.25);}
+.block-container {padding-bottom: 5rem !important;}
 </style>
 """, unsafe_allow_html=True)
 
