@@ -329,6 +329,7 @@ ANIM = """
 // step __STEP__
 (function () {
   var items = [];
+  var restorePos = false, scEl = null;
   function showAll() {
     items.forEach(function (it) {
       it.el.style.opacity = "1";
@@ -345,6 +346,28 @@ ANIM = """
     var vb = main && main.querySelector('[data-testid="stVerticalBlock"]');
     if (!vb) return;
     var me = window.frameElement;
+
+    // ---- 0. find the box that scrolls, so the cursors can live inside it and scroll with the page ----
+    function findScroller(start) {
+      var e = start, first = null;
+      while (e && e !== D.body && e !== D.documentElement) {
+        var oy = P.getComputedStyle(e).overflowY;
+        if (oy === "auto" || oy === "scroll" || oy === "overlay") {
+          if (e.scrollHeight > e.clientHeight + 1) return e;
+          if (!first) first = e;
+        }
+        e = e.parentElement;
+      }
+      return first;
+    }
+    var sc = findScroller(main), isDoc = !sc;
+    if (isDoc) sc = D.scrollingElement || D.documentElement;
+    // where the top-left corner of the whole page sits on the screen right now
+    function origin() {
+      if (isDoc) return {x: -(P.pageXOffset || 0), y: -(P.pageYOffset || 0)};
+      var q = sc.getBoundingClientRect();
+      return {x: q.left + sc.clientLeft - sc.scrollLeft, y: q.top + sc.clientTop - sc.scrollTop};
+    }
 
     // ---- 1. find the pieces of the page, in order from the top ----
     function add(kind, el, x) {
@@ -388,20 +411,35 @@ ANIM = """
     });
     items.forEach(function (it) { it.el.style.animation = "none"; it.el.style.opacity = "0"; });
 
-    // ---- 2. measure everything while it is hidden (opacity does not move layout) ----
+    // ---- 2. measure in PAGE coordinates (they do not change when you scroll) ----
     var W = P.innerWidth, H = P.innerHeight;
+    var O0 = origin();
+    // the part of the page you can see right now: cursors only work inside it
+    var win = {left: -O0.x + 6, top: -O0.y + 6, right: -O0.x + W - 6, bottom: -O0.y + H - 6};
     function textRect(el) {
       var g = D.createRange(); g.selectNodeContents(el);
       var q = g.getBoundingClientRect();
       return q.width > 0 ? q : el.getBoundingClientRect();
     }
+    function rectOf(it) {
+      return it.kind === "line" ? textRect(it.el)
+           : it.kind === "wipe" ? textRect(it.el.querySelector("h3, .setname") || it.el)
+           : it.el.getBoundingClientRect();
+    }
+    // read where a piece is RIGHT NOW (called again just before every move)
+    function fresh(it) {
+      var o = origin(), r = rectOf(it);
+      var V = {left: Math.max(r.left - o.x, win.left), top: Math.max(r.top - o.y, win.top),
+               right: Math.min(r.right - o.x, win.right), bottom: Math.min(r.bottom - o.y, win.bottom)};
+      if (V.right < V.left) V.right = V.left;
+      if (V.bottom < V.top) V.bottom = V.top;
+      it.V = V; return V;
+    }
     items.forEach(function (it) {
-      var r = it.kind === "line" ? textRect(it.el)
-            : it.kind === "wipe" ? textRect(it.el.querySelector("h3, .setname") || it.el)
-            : it.el.getBoundingClientRect();
+      var r = rectOf(it);
       it.r = r; it.area = r.width * r.height;
       it.vis = r.width > 0 && r.bottom > 6 && r.top < H - 6;
-      it.V = {left: Math.max(r.left, 6), top: Math.max(r.top, 6), right: Math.min(r.right, W - 6), bottom: Math.min(r.bottom, H - 6)};
+      fresh(it);
     });
 
     // ---- 3. one choreography per screen ----
@@ -421,19 +459,25 @@ ANIM = """
     if (CFG.mode === 3) bx.sort(function (a, b) { return b.r.left - a.r.left; });
     var order = fixed.concat(CFG.mode === 0 ? rest : wp.concat(bx, ot));
 
-    // ---- 4. cursor layer and effect helpers ----
+    // ---- 4. cursor layer (lives INSIDE the scrolling page) and effect helpers ----
     var layer = D.createElement("div"); layer.id = "agent-layer";
-    layer.style.cssText = "position:fixed;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:99999;overflow:hidden";
-    D.body.appendChild(layer);
-    function cleanup() { var l = D.getElementById("agent-layer"); if (l) l.remove(); }
+    var host = isDoc ? D.body : sc;
+    if (!isDoc && P.getComputedStyle(sc).position === "static") { sc.style.position = "relative"; restorePos = true; scEl = sc; }
+    layer.style.cssText = "position:absolute;left:0;top:0;width:" + sc.scrollWidth + "px;height:" + sc.scrollHeight + "px;pointer-events:none;z-index:99999;overflow:hidden";
+    host.appendChild(layer);
+    function cleanup() {
+      var l = D.getElementById("agent-layer"); if (l) l.remove();
+      if (restorePos && scEl) { scEl.style.position = ""; restorePos = false; }
+    }
     P.setTimeout(function () { if (run === P.__buildRun) { showAll(); cleanup(); } }, 12000);
 
     var COLORS = ["#F97316", "#22D3EE", "#A78BFA", "#FACC15", "#F472B6", "#60A5FA"];
     var ARROW = '<svg width="22" height="22" viewBox="0 0 24 24"><path d="M3 2l18 8-8 3-3 8z" fill="COL" stroke="#fff" stroke-width="1.5" stroke-linejoin="round"/></svg>';
+    var X0 = -O0.x, Y0 = -O0.y;   // top-left of what you can see, in page coordinates
     var cur = COLORS.slice(0, CFG.lanes).map(function (col, i) {
       var f = (i + 1) / (CFG.lanes + 1), c = D.createElement("div");
-      var x = CFG.from === "L" ? -30 : CFG.from === "R" ? W + 30 : W * f;
-      var y = CFG.from === "T" ? -30 : CFG.from === "B" ? H + 30 : H * f;
+      var x = CFG.from === "L" ? X0 - 30 : CFG.from === "R" ? X0 + W + 30 : X0 + W * f;
+      var y = CFG.from === "T" ? Y0 - 30 : CFG.from === "B" ? Y0 + H + 30 : Y0 + H * f;
       c.style.cssText = "position:absolute;left:-3px;top:-2px;transform:translate(" + x + "px," + y + "px)";
       c.innerHTML = ARROW.replace("COL", col); layer.appendChild(c);
       return {el: c, x: x, y: y};
@@ -483,8 +527,21 @@ ANIM = """
         if (now - t0 < ms) P.requestAnimationFrame(f);
       })(t0);
     }
+    // small geometry helpers (each takes the piece's current box V)
+    function corners(V) {
+      return [[V.left, V.top, V.right, V.bottom], [V.right, V.top, V.left, V.bottom],
+              [V.left, V.bottom, V.right, V.top], [V.right, V.bottom, V.left, V.top]][CFG.corner];
+    }
+    function mid(V) { return [(V.left + V.right) / 2, (V.top + V.bottom) / 2]; }
+    function lineGeo(V) {
+      var tall = V.bottom - V.top > 40, my = (V.top + V.bottom) / 2;
+      return {tall: tall, sx: V.left + 2, sy: tall ? V.top + 6 : my,
+              ex: tall ? V.right - 8 : V.right, ey: tall ? V.bottom - 6 : my};
+    }
 
     // ---- 5. plan every move on one clock, then play it frame by frame ----
+    // The plan only decides WHEN things happen. WHERE they happen is read again at the
+    // moment of each move, so the cursor and the drag box always sit on the real block.
     var evs = [], last = 0, free = cur.map(function () { return 0; });
     var pp = cur.map(function (c) { return {x: c.x, y: c.y}; });
     function at(t, fn) { evs.push({t: t, fn: fn}); }
@@ -492,19 +549,18 @@ ANIM = """
       var L = 0, i;
       for (i = 1; i < free.length; i++) if (free[i] < free[L]) L = i;
       var s = Math.max(free[L], last + 70), V = it.V, el = it.el, k = it.kind, from = pp[L];
-      var cx = (V.left + V.right) / 2, cy = (V.top + V.bottom) / 2;
       last = s;
       if (!it.vis || k === "fade") { at(s, function () { pop(el, 300); }); return; }
       if (k === "box" || k === "hero") {
-        var c = [[V.left, V.top, V.right, V.bottom], [V.right, V.top, V.left, V.bottom],
-                 [V.left, V.bottom, V.right, V.top], [V.right, V.bottom, V.left, V.top]][CFG.corner];
+        var c = corners(V);
         var tr = 200 + Math.min(240, Math.hypot(from.x - c[0], from.y - c[1]) * 0.25);
         var dr = 300 + Math.min(220, (V.right - V.left + V.bottom - V.top) * 0.18);
-        at(s, function () { move(L, c[0], c[1], tr); });
+        at(s, function () { var q = corners(fresh(it)); move(L, q[0], q[1], tr); });
         at(s + tr, function () {
-          it.box = mkBox(V);
+          var q = corners(fresh(it));
+          it.box = mkBox(it.V);
           it.box.animate([{clipPath: COLL[CFG.corner]}, {clipPath: "inset(-5px)"}], {duration: dr, easing: EASE, fill: "forwards"});
-          move(L, c[2], c[3], dr);
+          move(L, q[2], q[3], dr);
         });
         at(s + tr + dr, function () {
           pop(el, 240);
@@ -515,17 +571,17 @@ ANIM = """
         pp[L] = {x: c[2], y: c[3]};
         free[L] = s + tr + dr + (it.parts ? 700 : 80);
       } else if (k === "tap") {
-        var t2 = 200 + Math.min(240, Math.hypot(from.x - cx, from.y - cy) * 0.25);
-        at(s, function () { move(L, cx, cy, t2); });
-        at(s + t2, function () { ripple(cx, cy); pop(el, 240); });
-        pp[L] = {x: cx, y: cy}; free[L] = s + t2 + 80;
+        var m = mid(V);
+        var t2 = 200 + Math.min(240, Math.hypot(from.x - m[0], from.y - m[1]) * 0.25);
+        at(s, function () { var q = mid(fresh(it)); move(L, q[0], q[1], t2); });
+        at(s + t2, function () { var q = mid(fresh(it)); ripple(q[0], q[1]); pop(el, 240); });
+        pp[L] = {x: m[0], y: m[1]}; free[L] = s + t2 + 80;
       } else {
-        var tall = V.bottom - V.top > 40;
-        var sx = V.left + 2, sy = tall ? V.top + 6 : cy, ex = tall ? V.right - 8 : V.right, ey = tall ? V.bottom - 6 : cy;
-        var t3 = 200 + Math.min(240, Math.hypot(from.x - sx, from.y - sy) * 0.25), d3 = 260 + Math.min(200, (V.right - V.left) * 0.25);
-        at(s, function () { move(L, sx, sy, t3); });
-        at(s + t3, function () { wipe(el, d3, tall ? "y" : "x"); move(L, ex, ey, d3); });
-        pp[L] = {x: ex, y: ey}; free[L] = s + t3 + d3;
+        var g = lineGeo(V);
+        var t3 = 200 + Math.min(240, Math.hypot(from.x - g.sx, from.y - g.sy) * 0.25), d3 = 260 + Math.min(200, (V.right - V.left) * 0.25);
+        at(s, function () { var q = lineGeo(fresh(it)); move(L, q.sx, q.sy, t3); });
+        at(s + t3, function () { var q = lineGeo(fresh(it)); wipe(el, d3, q.tall ? "y" : "x"); move(L, q.ex, q.ey, d3); });
+        pp[L] = {x: g.ex, y: g.ey}; free[L] = s + t3 + d3;
       }
     });
     var endT = Math.max.apply(null, free) + 150;
@@ -533,10 +589,14 @@ ANIM = """
     at(endT + 450, function () { showAll(); cleanup(); });
     evs.sort(function (a, b) { return a.t - b.t; });
 
-    var T0 = null, idx = 0;
+    var T0 = null, idx = 0, lastSize = 0;
     (function loop(now) {
       if (run !== P.__buildRun) return;
       if (T0 === null) T0 = now;
+      if (now - lastSize > 250) {   // keep the cursor layer as big as the page, even if the page grows
+        lastSize = now;
+        layer.style.width = sc.scrollWidth + "px"; layer.style.height = sc.scrollHeight + "px";
+      }
       while (idx < evs.length && evs[idx].t <= now - T0) evs[idx++].fn();
       if (idx < evs.length) P.requestAnimationFrame(loop);
     })(P.performance.now());
