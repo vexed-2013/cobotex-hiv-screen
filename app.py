@@ -29,6 +29,9 @@ def jump(i):
 
 
 step = st.session_state.step
+arrived = st.session_state.get("last_step") != step
+st.session_state["last_step"] = step
+VIEW_DELAY = 2400 if (ANIMATE and arrived) else 150
 
 st.markdown("""
 <style>
@@ -143,35 +146,62 @@ def ligand_as_pdb(path):
 
 
 TEMPLATE = """
-<div id="v" style="width:100%;height:520px;position:relative;border-radius:12px;overflow:hidden;"></div>
+<div id="v" style="width:100%;height:450px;position:relative;border-radius:12px;overflow:hidden;background:#0F2A1B;">
+  <div id="ph" style="position:absolute;left:0;top:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center;color:#BEF264;font-family:system-ui,sans-serif;font-size:14px;">Loading 3D view...</div>
+</div>
 <script src="https://cdn.jsdelivr.net/npm/3dmol@2.4.2/build/3Dmol-min.js"></script>
 <script>
-const viewer = $3Dmol.createViewer("v", {backgroundColor: "#0F2A1B"});
-viewer.addModel(__PROT__, "pdbqt");
-viewer.addModel(__LIG__, "pdb");
-viewer.setStyle({model: 0}, {cartoon: {color: "#BBD3B0", opacity: 0.35}});
-viewer.addStyle({model: 0, within: {distance: 5, sel: {model: 1}}}, {line: {color: "#8FB38A"}});
-viewer.addStyle({model: 0, resn: "ASP", resi: 25}, {stick: {color: "#F59E0B", radius: 0.25}});
-viewer.setStyle({model: 1}, {stick: {colorscheme: "greenCarbon", radius: 0.3},
-                             sphere: {colorscheme: "greenCarbon", scale: 0.3}});
-viewer.zoomTo({model: 1});
-viewer.render();
-viewer.spin("y", 0.5);
+// the heavy setup waits, so it does not compete with the page-building animation
+setTimeout(function () {
+  document.getElementById("ph").remove();
+  const viewer = $3Dmol.createViewer("v", {backgroundColor: "#0F2A1B", cartoonQuality: 3,
+                                           antialias: (window.devicePixelRatio || 1) < 1.5});
+  viewer.addModel(__PROT__, "pdbqt");
+  viewer.addModel(__LIG__, "pdb");
+  viewer.setStyle({model: 0}, {cartoon: {color: "#9DBF93"}});
+  viewer.addStyle({model: 0, within: {distance: 5, sel: {model: 1}}}, {line: {color: "#8FB38A"}});
+  viewer.addStyle({model: 0, resn: "ASP", resi: 25}, {stick: {color: "#F59E0B", radius: 0.25}});
+  viewer.setStyle({model: 1}, {stick: {colorscheme: "greenCarbon", radius: 0.3}});
+  viewer.zoomTo({model: 1});
+  viewer.render();
 
-// stop spinning when touched, and start again after 1 minute with no activity
-const IDLE_MS = 60000;
-let idleTimer = null;
-const el = document.getElementById("v");
-function touched() {
-  viewer.spin(false);
-  clearTimeout(idleTimer);
-  idleTimer = setTimeout(function () { viewer.spin("y", 0.5); }, IDLE_MS);
-}
-["mousedown", "mouseup", "touchstart", "touchend", "wheel"].forEach(function (e) {
-  el.addEventListener(e, touched, {passive: true});
-});
+  // slow spin at about 15 frames a second; pauses when off-screen or in a hidden tab
+  const el = document.getElementById("v");
+  let spinning = true, onScreen = true, idle = null;
+  const IDLE_MS = 60000;
+  if (window.IntersectionObserver) {
+    new IntersectionObserver(function (e) { onScreen = e[0].isIntersecting; }).observe(el);
+  }
+  setInterval(function () {
+    if (spinning && onScreen && !document.hidden) { viewer.rotate(2, "y"); }
+  }, 66);
+  function touched() {
+    spinning = false; clearTimeout(idle);
+    idle = setTimeout(function () { spinning = true; }, IDLE_MS);
+  }
+  ["mousedown", "mouseup", "touchstart", "touchend", "wheel"].forEach(function (e) {
+    el.addEventListener(e, touched, {passive: true});
+  });
+}, __DELAY__);
 </script>
 """
+
+
+@st.cache_data
+def protein_text(path):
+    # heavy atoms only: hydrogens are not needed for the ribbon view
+    keep = [l for l in Path(path).read_text().splitlines()
+            if l.startswith(("ATOM", "HETATM")) and l.split()[-1] != "HD"]
+    return "\n".join(keep) + "\n"
+
+
+@st.cache_data
+def viewer_html(name, delay):
+    lig_path = POSES / ("docked.pdbqt" if name == "indinavir" else name + "_docked.pdbqt")
+    return (TEMPLATE
+            .replace("__PROT__", json.dumps(protein_text(str(POSES / "protein.pdbqt"))))
+            .replace("__LIG__", json.dumps(ligand_as_pdb(lig_path)))
+            .replace("__DELAY__", str(int(delay))))
 
 
 def show_viewer(name):
@@ -180,14 +210,10 @@ def show_viewer(name):
     if not prot_path.exists() or not lig_path.exists():
         st.warning("Pose file not found for " + name)
         return
-    page = (TEMPLATE
-            .replace("__PROT__", json.dumps(prot_path.read_text()))
-            .replace("__LIG__", json.dumps(ligand_as_pdb(lig_path))))
-    components.html(page, height=530)
+    components.html(viewer_html(name, VIEW_DELAY), height=460)
     st.caption("Ribbon: protease. Amber sticks: catalytic Asp25. Green: docked drug. "
                "It spins until you touch it, then starts again after a minute of inactivity. "
                "Drag to rotate, scroll to zoom.")
-
 
 
 # ---------- step 1: validate ----------
@@ -422,7 +448,8 @@ ANIM = """
     }
     function pop(el, ms) {
       el.style.opacity = "1";
-      el.animate([{opacity: 0, transform: "scale(.96)"}, {opacity: 1, transform: "none"}], {duration: ms, easing: "ease-out"});
+      var f = el.tagName === "IFRAME" ? [{opacity: 0}, {opacity: 1}] : [{opacity: 0, transform: "scale(.96)"}, {opacity: 1, transform: "none"}];
+      el.animate(f, {duration: ms, easing: "ease-out"});
     }
     function wipe(el, ms, axis) {
       el.style.opacity = "1";
