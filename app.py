@@ -404,31 +404,43 @@ yet that it can tell HIV drugs from other chemicals. That is the next step.
 elif step == 1:
     st.markdown("### Step 2: Can it separate drugs from non-drugs?")
     st.markdown('<div class="setname">Development set: 14 chemicals</div>', unsafe_allow_html=True)
-    set_cards("development")
-    dev = df[df["dataset"] == "development"]
-    colors = {"HIV drug": "#16A34A", "decoy": "#B45309", "control": "#64748B"}
-    fig = px.scatter(
-        dev, x="score", y="asp25_contacts", color="group", hover_name="chemical",
-        hover_data=["heavy_atoms", "asp25_min_dist", "verdict"],
-        color_discrete_map=colors, template="plotly_white",
-        labels={"score": "Vina score (kcal/mol), stronger binding to the right",
-                "asp25_contacts": "Contacts with Asp25 (N/O atoms within 3.5 Å)"})
-    fig.add_shape(type="rect", x0=-8.0, x1=-12.5, y0=3.5, y1=6.7,
-                  fillcolor="rgba(132,204,22,0.18)", line_width=0)
-    fig.add_vline(x=-8.0, line_dash="dash", line_color="#4B5F52")
-    fig.add_hline(y=3.5, line_dash="dash", line_color="#4B5F52")
-    fig.update_xaxes(range=[-4.5, -12.5])
-    fig.update_yaxes(range=[-0.7, 6.7])
-    fig.update_traces(marker=dict(size=14, line=dict(width=1, color="#FFFFFF")))
-    fig.update_layout(height=460, paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
-    st.plotly_chart(fig)
-    st.markdown("""
+    part = df[df["dataset"] == "development"]
+    hiv = part[part["group"] == "HIV drug"]
+    non = part[part["group"] != "HIV drug"]
+    a, b, c = st.columns([1, 1, 1.7])
+    a.markdown(card("HIV drugs found", "%d / %d" % (hiv["correct"].sum(), len(hiv)), "true positives",
+                    bad=not hiv["correct"].all(), size="small"), unsafe_allow_html=True)
+    b.markdown(card("Non-HIV rejected", "%d / %d" % (non["correct"].sum(), len(non)), "true negatives",
+                    bad=not non["correct"].all(), delay=0.25, size="small low"), unsafe_allow_html=True)
+    c.markdown(card("Correct overall", "%d / %d" % (part["correct"].sum(), len(part)),
+                    "used to choose the rule", delay=0.5, size="big"), unsafe_allow_html=True)
+    text_col, chart_col = st.columns([1, 2.2])
+    with text_col:
+        st.markdown("""
 Score alone is not enough: large non-HIV drugs such as imatinib score better than amprenavir, because big
 molecules touch more of the protein. The contact check fixes this. HIV drugs reach the catalytic Asp25
 residues, and the decoys do not.
 
 The shaded zone is the rule that was chosen here and then locked: **score ≤ -8.0 and Asp25 contacts ≥ 4.**
 """)
+    with chart_col:
+        dev = df[df["dataset"] == "development"]
+        colors = {"HIV drug": "#16A34A", "decoy": "#B45309", "control": "#64748B"}
+        fig = px.scatter(
+            dev, x="score", y="asp25_contacts", color="group", hover_name="chemical",
+            hover_data=["heavy_atoms", "asp25_min_dist", "verdict"],
+            color_discrete_map=colors, template="plotly_white",
+            labels={"score": "Vina score (kcal/mol), stronger binding to the right",
+                    "asp25_contacts": "Contacts with Asp25 (N/O atoms within 3.5 Å)"})
+        fig.add_shape(type="rect", x0=-8.0, x1=-12.5, y0=3.5, y1=6.7,
+                      fillcolor="rgba(132,204,22,0.18)", line_width=0)
+        fig.add_vline(x=-8.0, line_dash="dash", line_color="#4B5F52")
+        fig.add_hline(y=3.5, line_dash="dash", line_color="#4B5F52")
+        fig.update_xaxes(range=[-4.5, -12.5])
+        fig.update_yaxes(range=[-0.7, 6.7])
+        fig.update_traces(marker=dict(size=14, line=dict(width=1, color="#FFFFFF")))
+        fig.update_layout(height=460, paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
+        st.plotly_chart(fig)
 
 # ---------- step 3: test ----------
 elif step == 2:
