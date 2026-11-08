@@ -384,11 +384,13 @@ def show_viewer(name):
 # ---------- step 1: validate ----------
 if step == 0:
     st.markdown("### Step 1: Does the pipeline find a known answer?")
-    a, b, c = st.columns(3)
-    a.markdown(card("Re-dock RMSD", "0.93 Å", "indinavir vs the experimental pose"), unsafe_allow_html=True)
-    b.markdown(card("Success threshold", "&lt; 2 Å", "standard cutoff", delay=0.25), unsafe_allow_html=True)
-    c.markdown(card("Outcome", "Validated", "pose reproduced", delay=0.5), unsafe_allow_html=True)
-    st.markdown("""
+    a, b, c = st.columns([1.6, 1, 1])
+    a.markdown(card("Re-dock RMSD", "0.93 Å", "indinavir vs the experimental pose", size="big"), unsafe_allow_html=True)
+    b.markdown(card("Success threshold", "&lt; 2 Å", "standard cutoff", delay=0.25, size="small"), unsafe_allow_html=True)
+    c.markdown(card("Outcome", "Validated", "pose reproduced", delay=0.5, size="small low"), unsafe_allow_html=True)
+    text_col, _spare = st.columns([1.5, 1])
+    with text_col:
+        st.markdown("""
 Before trusting the tool on unknown chemicals, it has to find a known answer. Indinavir was taken out of
 the protein, placed in a random shape, and docked back into the HIV-1 protease pocket. Vina put it back
 within 0.93 Å of where the real experiment found it, well under the 2 Å limit.
