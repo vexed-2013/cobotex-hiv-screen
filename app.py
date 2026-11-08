@@ -916,6 +916,73 @@ HELIX_B = """
 
 if HELIX_STYLE == "B":
     components.html(HELIX_B, height=0)
+# ---------- extra effects 2: card lift, click sparks, cursor glow, grain ----------
+FX2 = """
+<script>
+(function () {
+  try {
+    var P = window.parent, D = P.document;
+    var run = (P.__fx2Run = (P.__fx2Run || 0) + 1);
+    var ON = {lift: true, sparks: true, glow: true, grain: true};
+    var reduce = P.matchMedia && P.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    ["fx2-style", "fx2-glow", "fx2-grain"].forEach(function (id) {
+      var o = D.getElementById(id); if (o) o.remove();
+    });
+
+    if (ON.lift) {
+      var s = D.createElement("style"); s.id = "fx2-style";
+      s.textContent = ".card {transition: translate 0.25s ease, scale 0.25s ease;} .card:hover {translate: 0 -4px; scale: 1.015;}";
+      D.head.appendChild(s);
+    }
+
+    if (ON.grain) {
+      var svg = "<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(#n)'/></svg>";
+      var g = D.createElement("div"); g.id = "fx2-grain";
+      g.style.cssText = "position:fixed;left:0;top:0;right:0;bottom:0;pointer-events:none;z-index:5;opacity:0.05";
+      g.style.backgroundImage = "url(data:image/svg+xml;base64," + P.btoa(svg) + ")";
+      D.body.appendChild(g);
+    }
+
+    if (ON.glow && !reduce) {
+      var b = D.createElement("div"); b.id = "fx2-glow";
+      b.style.cssText = "position:fixed;left:0;top:0;width:360px;height:360px;margin:-180px 0 0 -180px;border-radius:50%;pointer-events:none;z-index:1;opacity:0;transition:opacity 0.4s;background:radial-gradient(circle, rgba(61,187,135,0.20), rgba(61,187,135,0) 65%)";
+      D.body.appendChild(b);
+      var tx = 0, ty = 0, x = 0, y = 0;
+      var mv = function (e) {
+        if (run !== P.__fx2Run) { D.removeEventListener("mousemove", mv); return; }
+        tx = e.clientX; ty = e.clientY; b.style.opacity = "1";
+      };
+      D.addEventListener("mousemove", mv, {passive: true});
+      (function f() {
+        if (run !== P.__fx2Run) { b.remove(); return; }
+        x += (tx - x) * 0.12; y += (ty - y) * 0.12;
+        b.style.transform = "translate(" + x + "px," + y + "px)";
+        P.requestAnimationFrame(f);
+      })();
+    }
+
+    if (ON.sparks && !reduce) {
+      var one = function (cx, cy, a) {
+        var d = D.createElement("div");
+        d.style.cssText = "position:fixed;pointer-events:none;z-index:99998;width:3px;height:10px;border-radius:2px;background:#2F9E6B;left:" + cx + "px;top:" + cy + "px";
+        D.body.appendChild(d);
+        var L = 18 + Math.random() * 14;
+        d.animate([
+          {transform: "translate(-50%,-50%) rotate(" + a + "rad) translateY(0px)", opacity: 1},
+          {transform: "translate(-50%,-50%) rotate(" + a + "rad) translateY(" + L + "px)", opacity: 0}
+        ], {duration: 450, easing: "ease-out"}).onfinish = function () { d.remove(); };
+      };
+      var spark = function (e) {
+        if (run !== P.__fx2Run) { D.removeEventListener("click", spark, true); return; }
+        for (var i = 0; i < 8; i++) one(e.clientX, e.clientY, (i / 8) * 6.2832);
+      };
+      D.addEventListener("click", spark, true);
+    }
+  } catch (e) { console.warn("fx2:", e); }
+})();
+</script>
+"""
+components.html(FX2, height=0)  
 # ---------- extra effects: card spotlight + title shine ----------
 FX = """
 <script>
