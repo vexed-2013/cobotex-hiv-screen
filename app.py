@@ -494,7 +494,7 @@ else:
 
     left, right = st.columns([1, 1.5])
     with left:
-                st.markdown(card("Rule verdict", "HIV-like" if hit else "not HIV-like",
+        st.markdown(card("Rule verdict", "HIV-like" if hit else "not HIV-like",
                          "correct call" if good else "wrong call", bad=not good, size="big"),
                     unsafe_allow_html=True)
         a, b = st.columns(2)
@@ -505,6 +505,24 @@ else:
         st.markdown(card("Asp25 contacts", int(r["asp25_contacts"]),
                          "closest approach %.2f Å" % r["asp25_min_dist"], delay=0.6, size="small"),
                     unsafe_allow_html=True)
+        st.markdown("**Score test:** %.2f against a cutoff of %.1f, **%s**"
+                    % (r["score"], score_cut, "pass" if r["score"] <= score_cut else "fail"))
+        st.markdown("**Contact test:** %d against a minimum of %d, **%s**"
+                    % (r["asp25_contacts"], contact_cut, "pass" if r["asp25_contacts"] >= contact_cut else "fail"))
+    with right:
+        show_viewer(pick)
+
+st.markdown('<div class="foot">Educational project · Docking scores are estimates, '
+            'not measurements of drug strength</div>', unsafe_allow_html=True)
+        st.markdown("**Score test:** %.2f against a cutoff of %.1f, **%s**"
+                    % (r["score"], score_cut, "pass" if r["score"] <= score_cut else "fail"))
+        st.markdown("**Contact test:** %d against a minimum of %d, **%s**"
+                    % (r["asp25_contacts"], contact_cut, "pass" if r["asp25_contacts"] >= contact_cut else "fail"))
+    with right:
+        show_viewer(pick)
+
+st.markdown('<div class="foot">Educational project · Docking scores are estimates, '
+            'not measurements of drug strength</div>', unsafe_allow_html=True)
 # ---------- building animation: cursors place each block on the page, from the top ----------
 ANIM = """
 <script>
