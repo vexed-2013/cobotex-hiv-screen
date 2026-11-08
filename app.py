@@ -881,7 +881,7 @@ HELIX_B = """
         var d = dust[i], dy = (((d.y - t * d.v) % 1) + 1) % 1;
         glow(d.x * W, dy * H, d.r * 3, COL[d.c], 0.16 + 0.12 * Math.sin(t / 1500 + d.ph));
       }
-      ctx.save(); ctx.translate(W * 0.5, H * 0.5); ctx.rotate(0.21);
+      ctx.save(); ctx.translate(W - 130, H * 0.5); ctx.rotate(0.21);
       var pts = [];
       for (i = 0; i < N; i++) {
         var y = (i - N / 2) * STEP, pair = [];
