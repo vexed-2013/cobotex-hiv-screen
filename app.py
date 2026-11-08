@@ -226,14 +226,27 @@ div[class*="st-key-stepbtn_"] button[data-testid="stBaseButton-primary"]:hover {
 </style>
 """
 st.markdown(GLASS_BASE + GLASS_DONE + GLASS_ACTIVE, unsafe_allow_html=True)
+
+# ---------- layout sizes for cards (used by the new layouts) ----------
+st.markdown("""
+<style>
+.card.big {padding: 22px 26px;}
+.card.big .label {font-size: 0.8rem;}
+.card.big .value {font-size: 3.2rem; line-height: 1.15;}
+.card.big .sub {font-size: 0.95rem;}
+.card.small .value {font-size: 1.3rem;}
+.card.low {margin-top: 34px;}
+@media (max-width: 800px) {.card.low {margin-top: 0;}}
+</style>
+""", unsafe_allow_html=True)
 # ---------- DNA helix background ----------
 HELIX_STYLE = "B"   # "A" = CSS 3D helix, "B" = canvas helix, "off" = none
 
 
-def card(label, value, sub="", bad=False, delay=0.0):
-    return ('<div class="card%s" style="animation-delay:%.2fs"><div class="label">%s</div>'
+def card(label, value, sub="", bad=False, delay=0.0, size=""):
+    return ('<div class="card%s%s" style="animation-delay:%.2fs"><div class="label">%s</div>'
             '<div class="value">%s</div><div class="sub">%s</div></div>'
-            % (" bad" if bad else "", delay, label, value, sub))
+            % (" bad" if bad else "", (" " + size) if size else "", delay, label, value, sub))
 
 
 @st.cache_data
