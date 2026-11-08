@@ -81,6 +81,153 @@ done_css = "".join(
     ".st-key-stepbtn_%d button {background: #CFE8D7 !important; color: #1D4D35 !important;}" % i
     for i in range(step))
 st.markdown("<style>" + done_css + "</style>", unsafe_allow_html=True)
+# ---------- visual layer: soft green gradient, aurora banner, glass panels, glow ----------
+st.markdown("""
+<style>
+:root {--g1: #DDF3EA; --g2: #C9EBDD; --g3: #D4EEF0; --g4: #E6F2DF;}
+
+/* page: a very soft sea-glass wash behind everything */
+div.stApp {
+  background:
+    radial-gradient(900px 500px at 8% -5%, rgba(201,235,221,0.75), transparent 60%),
+    radial-gradient(800px 500px at 100% 30%, rgba(212,238,240,0.65), transparent 60%),
+    radial-gradient(900px 600px at 30% 105%, rgba(230,242,223,0.80), transparent 60%),
+    linear-gradient(180deg, #F6FBF8 0%, #EEF7F2 100%) !important;
+  background-attachment: fixed !important;
+}
+
+/* banner: slowly drifting aurora (on a pseudo-element, so the build animation can't stop it) */
+@keyframes aurora {
+  0%   {background-position: 0% 50%;}
+  50%  {background-position: 100% 50%;}
+  100% {background-position: 0% 50%;}
+}
+.hero {position: relative; overflow: hidden; isolation: isolate; background: none !important;
+       border: 1px solid rgba(255,255,255,0.75); box-shadow: 0 6px 24px rgba(31,107,87,0.08);}
+.hero::before {content: ""; position: absolute; inset: 0; z-index: -1;
+       background: linear-gradient(120deg, var(--g1), var(--g2), var(--g3), var(--g4), var(--g1));
+       background-size: 300% 300%; animation: aurora 26s ease-in-out infinite;}
+.hero .eyebrow {color: #1F6B57;}
+.hero h1 {color: #15493A !important;}
+.hero p {color: #2F5F52;}
+
+/* frosted-glass cards and step pills */
+.card {background: rgba(255,255,255,0.58); border: 1px solid rgba(255,255,255,0.8);
+       border-left: 4px solid #2F9E6B; box-shadow: 0 4px 18px rgba(31,107,87,0.08);
+       -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);}
+.card.bad {border-left-color: #C2410C;}
+[class*="st-key-stepbtn_"] button {background: rgba(255,255,255,0.55);
+       border: 1px solid rgba(255,255,255,0.8);
+       -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);}
+
+/* soft glow on the big numbers (orange on the "wrong" cards) */
+@keyframes glowGreen {
+  0%, 100% {text-shadow: 0 0 0 rgba(22,163,74,0);}
+  50%      {text-shadow: 0 0 14px rgba(22,163,74,0.40);}
+}
+@keyframes glowOrange {
+  0%, 100% {text-shadow: 0 0 0 rgba(194,65,12,0);}
+  50%      {text-shadow: 0 0 14px rgba(194,65,12,0.40);}
+}
+.card .value {animation: glowGreen 4.5s ease-in-out infinite;}
+.card.bad .value {animation-name: glowOrange;}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero::before, .card .value {animation: none !important;}
+}
+</style>
+""", unsafe_allow_html=True)
+
+# if the cursor "building" animation is switched off, fade each step in instead
+if not ANIMATE:
+    st.markdown("""
+<style>
+@keyframes stepIn {from {opacity: 0;} to {opacity: 1;}}
+[data-testid="stMainBlockContainer"] [data-testid="stElementContainer"] {animation: stepIn 0.7s ease both;}
+</style>
+""", unsafe_allow_html=True)
+# ---------- liquid-glass look: cards, step pills, round Back/Next ----------
+GLASS_BASE = """
+<style>
+/* cards */
+.card {position: relative; overflow: hidden;
+       background: linear-gradient(135deg, rgba(255,255,255,0.70), rgba(255,255,255,0.28)) !important;
+       -webkit-backdrop-filter: blur(18px) saturate(1.6); backdrop-filter: blur(18px) saturate(1.6);
+       border: 1px solid rgba(255,255,255,0.80); border-left: 4px solid #2F9E6B;
+       box-shadow: inset 0 1px 0 rgba(255,255,255,0.95), inset 0 -1px 0 rgba(255,255,255,0.30),
+                   0 10px 28px rgba(31,107,87,0.13);}
+.card.bad {border-left-color: #C2410C;}
+.card::before {content: ""; position: absolute; left: 0; right: 0; top: 0; height: 50%;
+       background: linear-gradient(180deg, rgba(255,255,255,0.55), rgba(255,255,255,0));
+       pointer-events: none;}
+.card > div {position: relative; z-index: 1;}
+
+/* step pills: glass capsules */
+div[class*="st-key-stepbtn_"] button {position: relative; overflow: hidden;
+       border-radius: 999px !important; color: #2F5F52 !important;
+       background: linear-gradient(135deg, rgba(255,255,255,0.72), rgba(255,255,255,0.30)) !important;
+       -webkit-backdrop-filter: blur(16px) saturate(1.6); backdrop-filter: blur(16px) saturate(1.6);
+       border: 1px solid rgba(255,255,255,0.85) !important;
+       box-shadow: inset 0 1px 0 rgba(255,255,255,0.95), inset 0 -1px 0 rgba(255,255,255,0.30),
+                   0 6px 18px rgba(31,107,87,0.14) !important;
+       transition: transform 0.2s ease, box-shadow 0.2s ease;}
+div[class*="st-key-stepbtn_"] button:hover {transform: translateY(-1px);
+       box-shadow: inset 0 1px 0 rgba(255,255,255,0.95), inset 0 -1px 0 rgba(255,255,255,0.30),
+                   0 10px 24px rgba(31,107,87,0.22) !important;}
+div[class*="st-key-stepbtn_"] button p {position: relative; z-index: 1;}
+
+/* round Back / Next buttons */
+div.st-key-navback button, div.st-key-navnext button {position: relative; overflow: hidden;
+       width: 58px !important; height: 58px !important; min-height: 0 !important; padding: 0 !important;
+       border-radius: 50% !important; color: #1D4D35 !important;
+       background: linear-gradient(135deg, rgba(255,255,255,0.78), rgba(255,255,255,0.30)) !important;
+       -webkit-backdrop-filter: blur(18px) saturate(1.6); backdrop-filter: blur(18px) saturate(1.6);
+       border: 1px solid rgba(255,255,255,0.90) !important;
+       box-shadow: inset 0 1px 0 rgba(255,255,255,0.95), inset 0 -1px 0 rgba(255,255,255,0.30),
+                   0 10px 26px rgba(31,107,87,0.25) !important;
+       transition: transform 0.2s ease;}
+div.st-key-navback button:hover, div.st-key-navnext button:hover {transform: scale(1.06);}
+div.st-key-navback button:disabled, div.st-key-navnext button:disabled {
+       color: rgba(29,77,53,0.35) !important; box-shadow: none !important;}
+div.st-key-navback button p, div.st-key-navnext button p {position: relative; z-index: 1;
+       font-size: 1.7rem !important; line-height: 1 !important; margin: 0; color: inherit !important;}
+
+/* glossy highlight along the top edge of every glass button */
+div[class*="st-key-stepbtn_"] button::before, div.st-key-navback button::before,
+div.st-key-navnext button::before {content: ""; position: absolute; left: 8%; right: 8%; top: 0;
+       height: 52%; border-radius: 999px; pointer-events: none;
+       background: linear-gradient(180deg, rgba(255,255,255,0.60), rgba(255,255,255,0));}
+
+@supports not ((backdrop-filter: blur(4px)) or (-webkit-backdrop-filter: blur(4px))) {
+  .card {background: rgba(255,255,255,0.88) !important;}
+}
+@media (prefers-reduced-motion: reduce) {
+  div[class*="st-key-stepbtn_"] button, div.st-key-navback button, div.st-key-navnext button
+      {transition: none !important;}
+}
+"""
+
+# finished steps: green-tinted glass (written after the base rules so they take priority)
+GLASS_DONE = "".join(
+    "div.st-key-stepbtn_" + str(i) + " button, div.st-key-stepbtn_" + str(i) + " button:hover "
+    "{background: linear-gradient(135deg, rgba(190,232,206,0.85), rgba(150,215,180,0.42)) !important; "
+    "color: #15493A !important;}"
+    for i in range(step))
+
+# the current step: stronger green glass
+GLASS_ACTIVE = """
+div[class*="st-key-stepbtn_"] button[kind="primary"],
+div[class*="st-key-stepbtn_"] button[data-testid="stBaseButton-primary"],
+div[class*="st-key-stepbtn_"] button[kind="primary"]:hover,
+div[class*="st-key-stepbtn_"] button[data-testid="stBaseButton-primary"]:hover {
+       background: linear-gradient(135deg, rgba(52,170,114,0.92), rgba(24,110,80,0.72)) !important;
+       color: #FFFFFF !important; border: 1px solid rgba(255,255,255,0.55) !important;
+       box-shadow: inset 0 1px 0 rgba(255,255,255,0.55), 0 8px 22px rgba(31,107,87,0.35) !important;}
+</style>
+"""
+st.markdown(GLASS_BASE + GLASS_DONE + GLASS_ACTIVE, unsafe_allow_html=True)
+# ---------- DNA helix background ----------
+HELIX_STYLE = "B"   # "A" = CSS 3D helix, "B" = canvas helix, "off" = none
 
 
 def card(label, value, sub="", bad=False, delay=0.0):
@@ -116,8 +263,8 @@ for i, name in enumerate(STEPS):
 
 # ... or use Back / Next
 n1, n2, n3 = st.columns([1, 4, 1])
-n1.button("← Back", key="navback", on_click=go, args=(-1,), disabled=(step == 0))
-n3.button("Next →", key="navnext", on_click=go, args=(1,), disabled=(step == len(STEPS) - 1))
+n1.button("←", key="navback", help="Back", on_click=go, args=(-1,), disabled=(step == 0))
+n3.button("→", key="navnext", help="Next", on_click=go, args=(1,), disabled=(step == len(STEPS) - 1))
 
 
 def set_cards(name):
@@ -641,3 +788,93 @@ if ANIMATE:
     first = not st.session_state.get("intro_played", False)
     st.session_state["intro_played"] = True
     components.html(ANIM.replace("__STEP__", str(step)).replace("__FULL__", "1" if first else "0"), height=0)
+# ---------- helix option B: canvas particles ----------
+HELIX_B = """
+<script>
+(function () {
+  try {
+    var P = window.parent, D = P.document;
+    var run = (P.__hxRun = (P.__hxRun || 0) + 1);
+    var old = D.getElementById("hx-canvas"); if (old) old.remove();
+    var host = D.querySelector(".stApp") || D.body;
+    var reduce = P.matchMedia && P.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (!D.getElementById("hx-style")) {
+      var s = D.createElement("style"); s.id = "hx-style";
+      s.textContent = '[data-testid="stAppViewContainer"], [data-testid="stMain"], section.main {background: transparent !important;} [data-testid="stMainBlockContainer"] {position: relative; z-index: 1;}';
+      D.head.appendChild(s);
+    }
+    var cv = D.createElement("canvas"); cv.id = "hx-canvas";
+    cv.style.cssText = "position:fixed;left:0;top:0;pointer-events:none;z-index:0";
+    host.insertBefore(cv, host.firstChild);
+    var ctx = cv.getContext("2d"), W = 0, H = 0;
+    var DPR = Math.min(P.devicePixelRatio || 1, 2);
+    function size() {
+      W = P.innerWidth; H = P.innerHeight;
+      cv.width = W * DPR; cv.height = H * DPR;
+      cv.style.width = W + "px"; cv.style.height = H + "px";
+      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    }
+    size();
+    function onResize() {
+      if (run !== P.__hxRun) { P.removeEventListener("resize", onResize); return; }
+      size();
+    }
+    P.addEventListener("resize", onResize);
+
+    var COL = [[47, 158, 107], [34, 166, 179]];
+    var dust = [];
+    for (var k = 0; k < 40; k++) {
+      dust.push({x: Math.random(), y: Math.random(), r: 1.5 + Math.random() * 3,
+                 v: 0.00002 + Math.random() * 0.00004, ph: Math.random() * 6.28, c: k % 2});
+    }
+    function glow(x, y, r, c, a) {
+      var g = ctx.createRadialGradient(x, y, 0, x, y, r);
+      g.addColorStop(0, "rgba(" + c[0] + "," + c[1] + "," + c[2] + "," + a + ")");
+      g.addColorStop(0.4, "rgba(" + c[0] + "," + c[1] + "," + c[2] + "," + (a * 0.55) + ")");
+      g.addColorStop(1, "rgba(" + c[0] + "," + c[1] + "," + c[2] + ",0)");
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, 6.2832); ctx.fill();
+    }
+    var R = 78, N = 44, STEP = 26, TURN = 0.42, F = 520, PERIOD = 42000;
+    function draw(t) {
+      ctx.clearRect(0, 0, W, H);
+      if (W < 900) return;
+      var i, s, rot = reduce ? 0 : (t / PERIOD) * 6.2832;
+      for (i = 0; i < dust.length; i++) {
+        var d = dust[i], dy = (((d.y - t * d.v) % 1) + 1) % 1;
+        glow(d.x * W, dy * H, d.r * 3, COL[d.c], 0.16 + 0.12 * Math.sin(t / 1500 + d.ph));
+      }
+      ctx.save(); ctx.translate(W * 0.5, H * 0.5); ctx.rotate(0.21);
+      var pts = [];
+      for (i = 0; i < N; i++) {
+        var y = (i - N / 2) * STEP, pair = [];
+        for (s = 0; s < 2; s++) {
+          var a = i * TURN + s * Math.PI + rot, z = R * Math.cos(a), sc = F / (F - z);
+          pair.push({x: R * Math.sin(a) * sc, y: y * sc, z: z, s: s, r: (4 + (i % 3)) * sc});
+        }
+        pts.push(pair);
+      }
+      ctx.lineWidth = 1.2; ctx.strokeStyle = "rgba(47,158,107,0.16)";
+      for (i = 0; i < N; i += 2) {
+        ctx.beginPath(); ctx.moveTo(pts[i][0].x, pts[i][0].y); ctx.lineTo(pts[i][1].x, pts[i][1].y); ctx.stroke();
+      }
+      var all = [];
+      pts.forEach(function (pr) { all.push(pr[0], pr[1]); });
+      all.sort(function (m, n) { return m.z - n.z; });
+      all.forEach(function (q) { glow(q.x, q.y, q.r * 2.6, COL[q.s], 0.12 + 0.32 * (q.z + R) / (2 * R)); });
+      ctx.restore();
+    }
+    var last = 0;
+    function loop(now) {
+      if (run !== P.__hxRun) return;
+      if (!cv.isConnected) host.insertBefore(cv, host.firstChild);
+      if (!D.hidden && now - last > 33) { last = now; draw(now); }
+      P.requestAnimationFrame(loop);
+    }
+    if (reduce) { draw(0); } else { P.requestAnimationFrame(loop); }
+  } catch (e) { console.warn("helix:", e); }
+})();
+</script>
+"""
+
+if HELIX_STYLE == "B":
+    components.html(HELIX_B, height=0)
