@@ -146,7 +146,86 @@ if not ANIMATE:
 [data-testid="stMainBlockContainer"] [data-testid="stElementContainer"] {animation: stepIn 0.7s ease both;}
 </style>
 """, unsafe_allow_html=True)
+# ---------- liquid-glass look: cards, step pills, round Back/Next ----------
+GLASS_BASE = """
+<style>
+/* cards */
+.card {position: relative; overflow: hidden;
+       background: linear-gradient(135deg, rgba(255,255,255,0.70), rgba(255,255,255,0.28)) !important;
+       -webkit-backdrop-filter: blur(18px) saturate(1.6); backdrop-filter: blur(18px) saturate(1.6);
+       border: 1px solid rgba(255,255,255,0.80); border-left: 4px solid #2F9E6B;
+       box-shadow: inset 0 1px 0 rgba(255,255,255,0.95), inset 0 -1px 0 rgba(255,255,255,0.30),
+                   0 10px 28px rgba(31,107,87,0.13);}
+.card.bad {border-left-color: #C2410C;}
+.card::before {content: ""; position: absolute; left: 0; right: 0; top: 0; height: 50%;
+       background: linear-gradient(180deg, rgba(255,255,255,0.55), rgba(255,255,255,0));
+       pointer-events: none;}
+.card > div {position: relative; z-index: 1;}
 
+/* step pills: glass capsules */
+div[class*="st-key-stepbtn_"] button {position: relative; overflow: hidden;
+       border-radius: 999px !important; color: #2F5F52 !important;
+       background: linear-gradient(135deg, rgba(255,255,255,0.72), rgba(255,255,255,0.30)) !important;
+       -webkit-backdrop-filter: blur(16px) saturate(1.6); backdrop-filter: blur(16px) saturate(1.6);
+       border: 1px solid rgba(255,255,255,0.85) !important;
+       box-shadow: inset 0 1px 0 rgba(255,255,255,0.95), inset 0 -1px 0 rgba(255,255,255,0.30),
+                   0 6px 18px rgba(31,107,87,0.14) !important;
+       transition: transform 0.2s ease, box-shadow 0.2s ease;}
+div[class*="st-key-stepbtn_"] button:hover {transform: translateY(-1px);
+       box-shadow: inset 0 1px 0 rgba(255,255,255,0.95), inset 0 -1px 0 rgba(255,255,255,0.30),
+                   0 10px 24px rgba(31,107,87,0.22) !important;}
+div[class*="st-key-stepbtn_"] button p {position: relative; z-index: 1;}
+
+/* round Back / Next buttons */
+div.st-key-navback button, div.st-key-navnext button {position: relative; overflow: hidden;
+       width: 58px !important; height: 58px !important; min-height: 0 !important; padding: 0 !important;
+       border-radius: 50% !important; color: #1D4D35 !important;
+       background: linear-gradient(135deg, rgba(255,255,255,0.78), rgba(255,255,255,0.30)) !important;
+       -webkit-backdrop-filter: blur(18px) saturate(1.6); backdrop-filter: blur(18px) saturate(1.6);
+       border: 1px solid rgba(255,255,255,0.90) !important;
+       box-shadow: inset 0 1px 0 rgba(255,255,255,0.95), inset 0 -1px 0 rgba(255,255,255,0.30),
+                   0 10px 26px rgba(31,107,87,0.25) !important;
+       transition: transform 0.2s ease;}
+div.st-key-navback button:hover, div.st-key-navnext button:hover {transform: scale(1.06);}
+div.st-key-navback button:disabled, div.st-key-navnext button:disabled {
+       color: rgba(29,77,53,0.35) !important; box-shadow: none !important;}
+div.st-key-navback button p, div.st-key-navnext button p {position: relative; z-index: 1;
+       font-size: 1.7rem !important; line-height: 1 !important; margin: 0; color: inherit !important;}
+
+/* glossy highlight along the top edge of every glass button */
+div[class*="st-key-stepbtn_"] button::before, div.st-key-navback button::before,
+div.st-key-navnext button::before {content: ""; position: absolute; left: 8%; right: 8%; top: 0;
+       height: 52%; border-radius: 999px; pointer-events: none;
+       background: linear-gradient(180deg, rgba(255,255,255,0.60), rgba(255,255,255,0));}
+
+@supports not ((backdrop-filter: blur(4px)) or (-webkit-backdrop-filter: blur(4px))) {
+  .card {background: rgba(255,255,255,0.88) !important;}
+}
+@media (prefers-reduced-motion: reduce) {
+  div[class*="st-key-stepbtn_"] button, div.st-key-navback button, div.st-key-navnext button
+      {transition: none !important;}
+}
+"""
+
+# finished steps: green-tinted glass (written after the base rules so they take priority)
+GLASS_DONE = "".join(
+    "div.st-key-stepbtn_" + str(i) + " button, div.st-key-stepbtn_" + str(i) + " button:hover "
+    "{background: linear-gradient(135deg, rgba(190,232,206,0.85), rgba(150,215,180,0.42)) !important; "
+    "color: #15493A !important;}"
+    for i in range(step))
+
+# the current step: stronger green glass
+GLASS_ACTIVE = """
+div[class*="st-key-stepbtn_"] button[kind="primary"],
+div[class*="st-key-stepbtn_"] button[data-testid="stBaseButton-primary"],
+div[class*="st-key-stepbtn_"] button[kind="primary"]:hover,
+div[class*="st-key-stepbtn_"] button[data-testid="stBaseButton-primary"]:hover {
+       background: linear-gradient(135deg, rgba(52,170,114,0.92), rgba(24,110,80,0.72)) !important;
+       color: #FFFFFF !important; border: 1px solid rgba(255,255,255,0.55) !important;
+       box-shadow: inset 0 1px 0 rgba(255,255,255,0.55), 0 8px 22px rgba(31,107,87,0.35) !important;}
+</style>
+"""
+st.markdown(GLASS_BASE + GLASS_DONE + GLASS_ACTIVE, unsafe_allow_html=True)
 
 def card(label, value, sub="", bad=False, delay=0.0):
     return ('<div class="card%s" style="animation-delay:%.2fs"><div class="label">%s</div>'
@@ -181,8 +260,8 @@ for i, name in enumerate(STEPS):
 
 # ... or use Back / Next
 n1, n2, n3 = st.columns([1, 4, 1])
-n1.button("← Back", key="navback", on_click=go, args=(-1,), disabled=(step == 0))
-n3.button("Next →", key="navnext", on_click=go, args=(1,), disabled=(step == len(STEPS) - 1))
+n1.button("←", key="navback", help="Back", on_click=go, args=(-1,), disabled=(step == 0))
+n3.button("→", key="navnext", help="Next", on_click=go, args=(1,), disabled=(step == len(STEPS) - 1))
 
 
 def set_cards(name):
