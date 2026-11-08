@@ -446,7 +446,7 @@ The shaded zone is the rule that was chosen here and then locked: **score ≤ -8
 elif step == 2:
     st.markdown("### Step 3: Does the rule hold on chemicals it has never seen?")
     st.markdown('<div class="setname">Independent test set: 12 chemicals</div>', unsafe_allow_html=True)
-part = df[df["dataset"] == "independent test"]
+    part = df[df["dataset"] == "independent test"]
     hiv = part[part["group"] == "HIV drug"]
     non = part[part["group"] != "HIV drug"]
     a, b, c = st.columns([1.7, 1, 1])
@@ -456,7 +456,7 @@ part = df[df["dataset"] == "independent test"]
                     bad=not hiv["correct"].all(), delay=0.25, size="small low"), unsafe_allow_html=True)
     c.markdown(card("Non-HIV rejected", "%d / %d" % (non["correct"].sum(), len(non)), "true negatives",
                     bad=not non["correct"].all(), delay=0.5, size="small"), unsafe_allow_html=True)
-        ind = df[df["dataset"] == "independent test"].sort_values("score")
+    ind = df[df["dataset"] == "independent test"].sort_values("score")
     tbl_col, lim_col = st.columns([2.3, 1])
     with tbl_col:
         st.dataframe(ind[["chemical", "group", "heavy_atoms", "score", "asp25_min_dist",
