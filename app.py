@@ -446,11 +446,23 @@ The shaded zone is the rule that was chosen here and then locked: **score ≤ -8
 elif step == 2:
     st.markdown("### Step 3: Does the rule hold on chemicals it has never seen?")
     st.markdown('<div class="setname">Independent test set: 12 chemicals</div>', unsafe_allow_html=True)
-    set_cards("independent test")
-    ind = df[df["dataset"] == "independent test"].sort_values("score")
-    st.dataframe(ind[["chemical", "group", "heavy_atoms", "score", "asp25_min_dist",
-                      "asp25_contacts", "verdict", "correct"]], hide_index=True)
-    st.markdown("""
+        part = df[df["dataset"] == "independent test"]
+    hiv = part[part["group"] == "HIV drug"]
+    non = part[part["group"] != "HIV drug"]
+    a, b, c = st.columns([1.7, 1, 1])
+    a.markdown(card("Correct overall", "%d / %d" % (part["correct"].sum(), len(part)),
+                    "never used to choose the rule", size="big"), unsafe_allow_html=True)
+    b.markdown(card("HIV drugs found", "%d / %d" % (hiv["correct"].sum(), len(hiv)), "true positives",
+                    bad=not hiv["correct"].all(), delay=0.25, size="small low"), unsafe_allow_html=True)
+    c.markdown(card("Non-HIV rejected", "%d / %d" % (non["correct"].sum(), len(non)), "true negatives",
+                    bad=not non["correct"].all(), delay=0.5, size="small"), unsafe_allow_html=True)
+        ind = df[df["dataset"] == "independent test"].sort_values("score")
+    tbl_col, lim_col = st.columns([2.3, 1])
+    with tbl_col:
+        st.dataframe(ind[["chemical", "group", "heavy_atoms", "score", "asp25_min_dist",
+                          "asp25_contacts", "verdict", "correct"]], hide_index=True)
+    with lim_col:
+        st.markdown("""
 **Limits**
 - Small number of chemicals; one docking run each.
 - Vina scores are rough estimates, not measurements of drug strength.
@@ -482,26 +494,17 @@ else:
 
     left, right = st.columns([1, 1.5])
     with left:
+                st.markdown(card("Rule verdict", "HIV-like" if hit else "not HIV-like",
+                         "correct call" if good else "wrong call", bad=not good, size="big"),
+                    unsafe_allow_html=True)
         a, b = st.columns(2)
-        a.markdown(card("True group", r["group"], r["dataset"]), unsafe_allow_html=True)
-        b.markdown(card("Vina score", "%.2f" % r["score"], "rank %d of %d" % (rank, len(df)), delay=0.2),
+        a.markdown(card("True group", r["group"], r["dataset"], delay=0.2, size="small"),
                    unsafe_allow_html=True)
-        c, d = st.columns(2)
-        c.markdown(card("Asp25 contacts", int(r["asp25_contacts"]),
-                        "closest approach %.2f Å" % r["asp25_min_dist"], delay=0.4), unsafe_allow_html=True)
-        d.markdown(card("Rule verdict", "HIV-like" if hit else "not HIV-like",
-                        "correct call" if good else "wrong call", bad=not good, delay=0.6),
-                   unsafe_allow_html=True)
-        st.markdown("**Score test:** %.2f against a cutoff of %.1f, **%s**"
-                    % (r["score"], score_cut, "pass" if r["score"] <= score_cut else "fail"))
-        st.markdown("**Contact test:** %d against a minimum of %d, **%s**"
-                    % (r["asp25_contacts"], contact_cut, "pass" if r["asp25_contacts"] >= contact_cut else "fail"))
-    with right:
-        show_viewer(pick)
-
-st.markdown('<div class="foot">Educational project · Docking scores are estimates, '
-            'not measurements of drug strength</div>', unsafe_allow_html=True)
-
+        b.markdown(card("Vina score", "%.2f" % r["score"], "rank %d of %d" % (rank, len(df)),
+                        delay=0.4, size="small low"), unsafe_allow_html=True)
+        st.markdown(card("Asp25 contacts", int(r["asp25_contacts"]),
+                         "closest approach %.2f Å" % r["asp25_min_dist"], delay=0.6, size="small"),
+                    unsafe_allow_html=True)
 # ---------- building animation: cursors place each block on the page, from the top ----------
 ANIM = """
 <script>
