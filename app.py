@@ -513,17 +513,7 @@ else:
         show_viewer(pick)
 
 st.markdown('<div class="foot">Educational project · Docking scores are estimates, '
-            'not measurements of drug strength</div>', unsafe_allow_html=True)
-        st.markdown("**Score test:** %.2f against a cutoff of %.1f, **%s**"
-                    % (r["score"], score_cut, "pass" if r["score"] <= score_cut else "fail"))
-        st.markdown("**Contact test:** %d against a minimum of %d, **%s**"
-                    % (r["asp25_contacts"], contact_cut, "pass" if r["asp25_contacts"] >= contact_cut else "fail"))
-    with right:
-        show_viewer(pick)
-
-st.markdown('<div class="foot">Educational project · Docking scores are estimates, '
-            'not measurements of drug strength</div>', unsafe_allow_html=True)
-# ---------- building animation: cursors place each block on the page, from the top ----------
+            'not measurements of drug strength</div>', unsafe_allow_html=True)# ---------- building animation: cursors place each block on the page, from the top ----------
 ANIM = """
 <script>
 // step __STEP__
