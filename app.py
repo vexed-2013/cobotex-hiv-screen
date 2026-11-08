@@ -226,6 +226,47 @@ div[class*="st-key-stepbtn_"] button[data-testid="stBaseButton-primary"]:hover {
 </style>
 """
 st.markdown(GLASS_BASE + GLASS_DONE + GLASS_ACTIVE, unsafe_allow_html=True)
+# ---------- DNA helix background ----------
+HELIX_STYLE = "A"   # "A" = CSS 3D helix, "B" = canvas helix, "off" = none
+
+HELIX_CSS = """
+<style>
+[data-testid="stMainBlockContainer"] {position: relative; z-index: 0;}
+@keyframes hxspin {from {transform: rotateY(0deg);} to {transform: rotateY(360deg);}}
+@keyframes hxdepth {0% {opacity: 1;} 25% {opacity: .55;} 50% {opacity: .18;} 75% {opacity: .55;} 100% {opacity: 1;}}
+.hx-wrap {position: fixed; top: -60px; right: 40px; width: 240px; height: 125vh; perspective: 900px;
+          pointer-events: none; z-index: -1; transform: rotateZ(12deg); transform-origin: 50% 0;}
+.hx {position: absolute; left: 50%; top: 0; width: 0; height: 0; transform-style: preserve-3d;
+     animation: hxspin 42s linear infinite;}
+.hx-dot {position: absolute; left: 0; border-radius: 50%; animation: hxdepth 42s linear infinite;}
+.hx-rung {position: absolute; left: -78px; width: 156px; height: 2px; opacity: 0.30;
+          background: linear-gradient(90deg, #2F9E6B, #22A6B3);}
+@media (max-width: 900px) {.hx-wrap {display: none;}}
+@media (prefers-reduced-motion: reduce) {.hx, .hx-dot {animation: none !important;}}
+</style>
+"""
+
+
+def helix_html(n=42, step=27, turn=24, radius=78, period=42):
+    out = []
+    for i in range(n):
+        y = i * step
+        if i % 2 == 0:
+            out.append('<i class="hx-rung" style="top:%dpx;transform:rotateY(%ddeg)"></i>' % (y, i * turn))
+        for off, col in ((0, "#2F9E6B"), (180, "#22A6B3")):
+            ang = i * turn + off
+            size = 8 + (i % 3) * 2
+            delay = -((ang % 360) / 360.0) * period
+            out.append(
+                '<i class="hx-dot" style="top:%dpx;margin:-%dpx 0 0 -%dpx;width:%dpx;height:%dpx;'
+                'background:%s;box-shadow:0 0 10px 2px %s88;'
+                'transform:rotateY(%ddeg) translateZ(%dpx);animation-delay:%.2fs"></i>'
+                % (y, size // 2, size // 2, size, size, col, col, ang, radius, delay))
+    return '<div class="hx-wrap"><div class="hx">' + "".join(out) + "</div></div>"
+
+
+if HELIX_STYLE == "A":
+    st.markdown(HELIX_CSS + helix_html(), unsafe_allow_html=True)
 
 def card(label, value, sub="", bad=False, delay=0.0):
     return ('<div class="card%s" style="animation-delay:%.2fs"><div class="label">%s</div>'
@@ -785,3 +826,93 @@ if ANIMATE:
     first = not st.session_state.get("intro_played", False)
     st.session_state["intro_played"] = True
     components.html(ANIM.replace("__STEP__", str(step)).replace("__FULL__", "1" if first else "0"), height=0)
+# ---------- helix option B: canvas particles ----------
+HELIX_B = """
+<script>
+(function () {
+  try {
+    var P = window.parent, D = P.document;
+    var run = (P.__hxRun = (P.__hxRun || 0) + 1);
+    var old = D.getElementById("hx-canvas"); if (old) old.remove();
+    var host = D.querySelector(".stApp") || D.body;
+    var reduce = P.matchMedia && P.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (!D.getElementById("hx-style")) {
+      var s = D.createElement("style"); s.id = "hx-style";
+      s.textContent = '[data-testid="stAppViewContainer"], [data-testid="stMain"], section.main {background: transparent !important;} [data-testid="stMainBlockContainer"] {position: relative; z-index: 1;}';
+      D.head.appendChild(s);
+    }
+    var cv = D.createElement("canvas"); cv.id = "hx-canvas";
+    cv.style.cssText = "position:fixed;left:0;top:0;pointer-events:none;z-index:0";
+    host.insertBefore(cv, host.firstChild);
+    var ctx = cv.getContext("2d"), W = 0, H = 0;
+    var DPR = Math.min(P.devicePixelRatio || 1, 2);
+    function size() {
+      W = P.innerWidth; H = P.innerHeight;
+      cv.width = W * DPR; cv.height = H * DPR;
+      cv.style.width = W + "px"; cv.style.height = H + "px";
+      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    }
+    size();
+    function onResize() {
+      if (run !== P.__hxRun) { P.removeEventListener("resize", onResize); return; }
+      size();
+    }
+    P.addEventListener("resize", onResize);
+
+    var COL = [[47, 158, 107], [34, 166, 179]];
+    var dust = [];
+    for (var k = 0; k < 40; k++) {
+      dust.push({x: Math.random(), y: Math.random(), r: 1.5 + Math.random() * 3,
+                 v: 0.00002 + Math.random() * 0.00004, ph: Math.random() * 6.28, c: k % 2});
+    }
+    function glow(x, y, r, c, a) {
+      var g = ctx.createRadialGradient(x, y, 0, x, y, r);
+      g.addColorStop(0, "rgba(" + c[0] + "," + c[1] + "," + c[2] + "," + a + ")");
+      g.addColorStop(0.4, "rgba(" + c[0] + "," + c[1] + "," + c[2] + "," + (a * 0.55) + ")");
+      g.addColorStop(1, "rgba(" + c[0] + "," + c[1] + "," + c[2] + ",0)");
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, 6.2832); ctx.fill();
+    }
+    var R = 78, N = 44, STEP = 26, TURN = 0.42, F = 520, PERIOD = 42000;
+    function draw(t) {
+      ctx.clearRect(0, 0, W, H);
+      if (W < 900) return;
+      var i, s, rot = reduce ? 0 : (t / PERIOD) * 6.2832;
+      for (i = 0; i < dust.length; i++) {
+        var d = dust[i], dy = (((d.y - t * d.v) % 1) + 1) % 1;
+        glow(d.x * W, dy * H, d.r * 3, COL[d.c], 0.16 + 0.12 * Math.sin(t / 1500 + d.ph));
+      }
+      ctx.save(); ctx.translate(W - 150, H * 0.5); ctx.rotate(0.21);
+      var pts = [];
+      for (i = 0; i < N; i++) {
+        var y = (i - N / 2) * STEP, pair = [];
+        for (s = 0; s < 2; s++) {
+          var a = i * TURN + s * Math.PI + rot, z = R * Math.cos(a), sc = F / (F - z);
+          pair.push({x: R * Math.sin(a) * sc, y: y * sc, z: z, s: s, r: (4 + (i % 3)) * sc});
+        }
+        pts.push(pair);
+      }
+      ctx.lineWidth = 1.2; ctx.strokeStyle = "rgba(47,158,107,0.16)";
+      for (i = 0; i < N; i += 2) {
+        ctx.beginPath(); ctx.moveTo(pts[i][0].x, pts[i][0].y); ctx.lineTo(pts[i][1].x, pts[i][1].y); ctx.stroke();
+      }
+      var all = [];
+      pts.forEach(function (pr) { all.push(pr[0], pr[1]); });
+      all.sort(function (m, n) { return m.z - n.z; });
+      all.forEach(function (q) { glow(q.x, q.y, q.r * 2.6, COL[q.s], 0.22 + 0.55 * (q.z + R) / (2 * R)); });
+      ctx.restore();
+    }
+    var last = 0;
+    function loop(now) {
+      if (run !== P.__hxRun) return;
+      if (!cv.isConnected) host.insertBefore(cv, host.firstChild);
+      if (!D.hidden && now - last > 33) { last = now; draw(now); }
+      P.requestAnimationFrame(loop);
+    }
+    if (reduce) { draw(0); } else { P.requestAnimationFrame(loop); }
+  } catch (e) { console.warn("helix:", e); }
+})();
+</script>
+"""
+
+if HELIX_STYLE == "B":
+    components.html(HELIX_B, height=0)
