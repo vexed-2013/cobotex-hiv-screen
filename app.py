@@ -916,3 +916,33 @@ HELIX_B = """
 
 if HELIX_STYLE == "B":
     components.html(HELIX_B, height=0)
+# ---------- extra effects: card spotlight + title shine ----------
+FX = """
+<script>
+(function () {
+  try {
+    var P = window.parent, D = P.document;
+    var run = (P.__fxRun = (P.__fxRun || 0) + 1);
+    var old = D.getElementById("fx-style"); if (old) old.remove();
+    var s = D.createElement("style"); s.id = "fx-style";
+    s.textContent =
+      '.card::after {content: ""; position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity 0.3s ease; background: radial-gradient(260px circle at var(--mx, 50%) var(--my, 50%), rgba(47,158,107,0.24), transparent 70%);}' +
+      '.card:hover::after {opacity: 1;}' +
+      '@keyframes shine {0% {background-position: 150% 0;} 100% {background-position: -50% 0;}}' +
+      '.hero h1 {background: linear-gradient(100deg, #15493A 25%, #3DBB87 45%, #15493A 65%); background-size: 250% 100%; -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; animation: shine 7s linear infinite;}' +
+      '@media (prefers-reduced-motion: reduce) {.hero h1 {animation: none !important;}}';
+    D.head.appendChild(s);
+    function mv(e) {
+      if (run !== P.__fxRun) { D.removeEventListener("mousemove", mv); return; }
+      var c = e.target && e.target.closest ? e.target.closest(".card") : null;
+      if (!c) return;
+      var r = c.getBoundingClientRect();
+      c.style.setProperty("--mx", (e.clientX - r.left) + "px");
+      c.style.setProperty("--my", (e.clientY - r.top) + "px");
+    }
+    D.addEventListener("mousemove", mv, {passive: true});
+  } catch (e) { console.warn("fx:", e); }
+})();
+</script>
+"""
+components.html(FX, height=0)
