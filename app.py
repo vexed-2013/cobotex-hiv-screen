@@ -446,7 +446,7 @@ The shaded zone is the rule that was chosen here and then locked: **score ≤ -8
 elif step == 2:
     st.markdown("### Step 3: Does the rule hold on chemicals it has never seen?")
     st.markdown('<div class="setname">Independent test set: 12 chemicals</div>', unsafe_allow_html=True)
-        part = df[df["dataset"] == "independent test"]
+part = df[df["dataset"] == "independent test"]
     hiv = part[part["group"] == "HIV drug"]
     non = part[part["group"] != "HIV drug"]
     a, b, c = st.columns([1.7, 1, 1])
