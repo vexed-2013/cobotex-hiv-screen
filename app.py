@@ -67,7 +67,7 @@ header[data-testid="stHeader"] {background: transparent;}
 .card .sub {color: #4B5F52; font-size: 0.82rem;}
 .card.bad .value {color: #C2410C;}
 .setname {font-size: 1rem; font-weight: 700; color: #14532D; margin: 6px 0;}
-.foot {color: #4B5F52; font-size: 0.8rem; margin-top: 30px; text-align: center;}
+.foot {color: #4B5F52; font-size: 0.8rem; margin-top: 30px; text-align: left;}
 .st-key-navback, .st-key-navnext {position: fixed; bottom: 22px; z-index: 1000; width: auto !important;}
 .st-key-navback {left: 24px;}
 .st-key-navnext {right: 24px;}
@@ -268,7 +268,7 @@ st.markdown(
     unsafe_allow_html=True)
 
 # click any step directly ...
-pill_cols = st.columns(len(STEPS))
+pill_cols = st.columns([1, 1, 1, 1, 2.2])[:4]
 for i, name in enumerate(STEPS):
     label = ("✓ " if i < step else "") + "%d · %s" % (i + 1, name)
     pill_cols[i].button(label, key="stepbtn_%d" % i, on_click=jump, args=(i,),
