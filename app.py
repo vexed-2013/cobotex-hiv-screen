@@ -265,7 +265,7 @@ def helix_html(n=42, step=27, turn=24, radius=78, period=42):
     return '<div class="hx-wrap"><div class="hx">' + "".join(out) + "</div></div>"
 
 
-if HELIX_STYLE == "A":
+if HELIX_STYLE == "B":
     st.markdown(HELIX_CSS + helix_html(), unsafe_allow_html=True)
 
 def card(label, value, sub="", bad=False, delay=0.0):
