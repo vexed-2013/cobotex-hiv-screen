@@ -67,7 +67,7 @@ header[data-testid="stHeader"] {background: transparent;}
 .card .sub {color: #4B5F52; font-size: 0.82rem;}
 .card.bad .value {color: #C2410C;}
 .setname {font-size: 1rem; font-weight: 700; color: #14532D; margin: 6px 0;}
-.foot {color: #4B5F52; font-size: 0.8rem; margin-top: 30px; text-align: center;}
+.foot {color: #4B5F52; font-size: 0.8rem; margin-top: 30px; text-align: left;}
 .st-key-navback, .st-key-navnext {position: fixed; bottom: 22px; z-index: 1000; width: auto !important;}
 .st-key-navback {left: 24px;}
 .st-key-navnext {right: 24px;}
@@ -226,14 +226,27 @@ div[class*="st-key-stepbtn_"] button[data-testid="stBaseButton-primary"]:hover {
 </style>
 """
 st.markdown(GLASS_BASE + GLASS_DONE + GLASS_ACTIVE, unsafe_allow_html=True)
+
+# ---------- layout sizes for cards (used by the new layouts) ----------
+st.markdown("""
+<style>
+.card.big {padding: 22px 26px;}
+.card.big .label {font-size: 0.8rem;}
+.card.big .value {font-size: 3.2rem; line-height: 1.15;}
+.card.big .sub {font-size: 0.95rem;}
+.card.small .value {font-size: 1.3rem;}
+.card.low {margin-top: 34px;}
+@media (max-width: 800px) {.card.low {margin-top: 0;}}
+</style>
+""", unsafe_allow_html=True)
 # ---------- DNA helix background ----------
 HELIX_STYLE = "B"   # "A" = CSS 3D helix, "B" = canvas helix, "off" = none
 
 
-def card(label, value, sub="", bad=False, delay=0.0):
-    return ('<div class="card%s" style="animation-delay:%.2fs"><div class="label">%s</div>'
+def card(label, value, sub="", bad=False, delay=0.0, size=""):
+    return ('<div class="card%s%s" style="animation-delay:%.2fs"><div class="label">%s</div>'
             '<div class="value">%s</div><div class="sub">%s</div></div>'
-            % (" bad" if bad else "", delay, label, value, sub))
+            % (" bad" if bad else "", (" " + size) if size else "", delay, label, value, sub))
 
 
 @st.cache_data
@@ -255,7 +268,7 @@ st.markdown(
     unsafe_allow_html=True)
 
 # click any step directly ...
-pill_cols = st.columns(len(STEPS))
+pill_cols = st.columns([1, 1, 1, 1, 2.2])[:4]
 for i, name in enumerate(STEPS):
     label = ("✓ " if i < step else "") + "%d · %s" % (i + 1, name)
     pill_cols[i].button(label, key="stepbtn_%d" % i, on_click=jump, args=(i,),
@@ -371,11 +384,13 @@ def show_viewer(name):
 # ---------- step 1: validate ----------
 if step == 0:
     st.markdown("### Step 1: Does the pipeline find a known answer?")
-    a, b, c = st.columns(3)
-    a.markdown(card("Re-dock RMSD", "0.93 Å", "indinavir vs the experimental pose"), unsafe_allow_html=True)
-    b.markdown(card("Success threshold", "&lt; 2 Å", "standard cutoff", delay=0.25), unsafe_allow_html=True)
-    c.markdown(card("Outcome", "Validated", "pose reproduced", delay=0.5), unsafe_allow_html=True)
-    st.markdown("""
+    a, b, c = st.columns([1.6, 1, 1])
+    a.markdown(card("Re-dock RMSD", "0.93 Å", "indinavir vs the experimental pose", size="big"), unsafe_allow_html=True)
+    b.markdown(card("Success threshold", "&lt; 2 Å", "standard cutoff", delay=0.25, size="small"), unsafe_allow_html=True)
+    c.markdown(card("Outcome", "Validated", "pose reproduced", delay=0.5, size="small low"), unsafe_allow_html=True)
+    text_col, _spare = st.columns([1.5, 1])
+    with text_col:
+        st.markdown("""
 Before trusting the tool on unknown chemicals, it has to find a known answer. Indinavir was taken out of
 the protein, placed in a random shape, and docked back into the HIV-1 protease pocket. Vina put it back
 within 0.93 Å of where the real experiment found it, well under the 2 Å limit.
@@ -389,41 +404,65 @@ yet that it can tell HIV drugs from other chemicals. That is the next step.
 elif step == 1:
     st.markdown("### Step 2: Can it separate drugs from non-drugs?")
     st.markdown('<div class="setname">Development set: 14 chemicals</div>', unsafe_allow_html=True)
-    set_cards("development")
-    dev = df[df["dataset"] == "development"]
-    colors = {"HIV drug": "#16A34A", "decoy": "#B45309", "control": "#64748B"}
-    fig = px.scatter(
-        dev, x="score", y="asp25_contacts", color="group", hover_name="chemical",
-        hover_data=["heavy_atoms", "asp25_min_dist", "verdict"],
-        color_discrete_map=colors, template="plotly_white",
-        labels={"score": "Vina score (kcal/mol), stronger binding to the right",
-                "asp25_contacts": "Contacts with Asp25 (N/O atoms within 3.5 Å)"})
-    fig.add_shape(type="rect", x0=-8.0, x1=-12.5, y0=3.5, y1=6.7,
-                  fillcolor="rgba(132,204,22,0.18)", line_width=0)
-    fig.add_vline(x=-8.0, line_dash="dash", line_color="#4B5F52")
-    fig.add_hline(y=3.5, line_dash="dash", line_color="#4B5F52")
-    fig.update_xaxes(range=[-4.5, -12.5])
-    fig.update_yaxes(range=[-0.7, 6.7])
-    fig.update_traces(marker=dict(size=14, line=dict(width=1, color="#FFFFFF")))
-    fig.update_layout(height=460, paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
-    st.plotly_chart(fig)
-    st.markdown("""
+    part = df[df["dataset"] == "development"]
+    hiv = part[part["group"] == "HIV drug"]
+    non = part[part["group"] != "HIV drug"]
+    a, b, c = st.columns([1, 1, 1.7])
+    a.markdown(card("HIV drugs found", "%d / %d" % (hiv["correct"].sum(), len(hiv)), "true positives",
+                    bad=not hiv["correct"].all(), size="small"), unsafe_allow_html=True)
+    b.markdown(card("Non-HIV rejected", "%d / %d" % (non["correct"].sum(), len(non)), "true negatives",
+                    bad=not non["correct"].all(), delay=0.25, size="small low"), unsafe_allow_html=True)
+    c.markdown(card("Correct overall", "%d / %d" % (part["correct"].sum(), len(part)),
+                    "used to choose the rule", delay=0.5, size="big"), unsafe_allow_html=True)
+    text_col, chart_col = st.columns([1, 2.2])
+    with text_col:
+        st.markdown("""
 Score alone is not enough: large non-HIV drugs such as imatinib score better than amprenavir, because big
 molecules touch more of the protein. The contact check fixes this. HIV drugs reach the catalytic Asp25
 residues, and the decoys do not.
 
 The shaded zone is the rule that was chosen here and then locked: **score ≤ -8.0 and Asp25 contacts ≥ 4.**
 """)
+    with chart_col:
+        dev = df[df["dataset"] == "development"]
+        colors = {"HIV drug": "#16A34A", "decoy": "#B45309", "control": "#64748B"}
+        fig = px.scatter(
+            dev, x="score", y="asp25_contacts", color="group", hover_name="chemical",
+            hover_data=["heavy_atoms", "asp25_min_dist", "verdict"],
+            color_discrete_map=colors, template="plotly_white",
+            labels={"score": "Vina score (kcal/mol), stronger binding to the right",
+                    "asp25_contacts": "Contacts with Asp25 (N/O atoms within 3.5 Å)"})
+        fig.add_shape(type="rect", x0=-8.0, x1=-12.5, y0=3.5, y1=6.7,
+                      fillcolor="rgba(132,204,22,0.18)", line_width=0)
+        fig.add_vline(x=-8.0, line_dash="dash", line_color="#4B5F52")
+        fig.add_hline(y=3.5, line_dash="dash", line_color="#4B5F52")
+        fig.update_xaxes(range=[-4.5, -12.5])
+        fig.update_yaxes(range=[-0.7, 6.7])
+        fig.update_traces(marker=dict(size=14, line=dict(width=1, color="#FFFFFF")))
+        fig.update_layout(height=460, paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
+        st.plotly_chart(fig)
 
 # ---------- step 3: test ----------
 elif step == 2:
     st.markdown("### Step 3: Does the rule hold on chemicals it has never seen?")
     st.markdown('<div class="setname">Independent test set: 12 chemicals</div>', unsafe_allow_html=True)
-    set_cards("independent test")
+    part = df[df["dataset"] == "independent test"]
+    hiv = part[part["group"] == "HIV drug"]
+    non = part[part["group"] != "HIV drug"]
+    a, b, c = st.columns([1.7, 1, 1])
+    a.markdown(card("Correct overall", "%d / %d" % (part["correct"].sum(), len(part)),
+                    "never used to choose the rule", size="big"), unsafe_allow_html=True)
+    b.markdown(card("HIV drugs found", "%d / %d" % (hiv["correct"].sum(), len(hiv)), "true positives",
+                    bad=not hiv["correct"].all(), delay=0.25, size="small low"), unsafe_allow_html=True)
+    c.markdown(card("Non-HIV rejected", "%d / %d" % (non["correct"].sum(), len(non)), "true negatives",
+                    bad=not non["correct"].all(), delay=0.5, size="small"), unsafe_allow_html=True)
     ind = df[df["dataset"] == "independent test"].sort_values("score")
-    st.dataframe(ind[["chemical", "group", "heavy_atoms", "score", "asp25_min_dist",
-                      "asp25_contacts", "verdict", "correct"]], hide_index=True)
-    st.markdown("""
+    tbl_col, lim_col = st.columns([2.3, 1])
+    with tbl_col:
+        st.dataframe(ind[["chemical", "group", "heavy_atoms", "score", "asp25_min_dist",
+                          "asp25_contacts", "verdict", "correct"]], hide_index=True)
+    with lim_col:
+        st.markdown("""
 **Limits**
 - Small number of chemicals; one docking run each.
 - Vina scores are rough estimates, not measurements of drug strength.
@@ -455,16 +494,17 @@ else:
 
     left, right = st.columns([1, 1.5])
     with left:
+        st.markdown(card("Rule verdict", "HIV-like" if hit else "not HIV-like",
+                         "correct call" if good else "wrong call", bad=not good, size="big"),
+                    unsafe_allow_html=True)
         a, b = st.columns(2)
-        a.markdown(card("True group", r["group"], r["dataset"]), unsafe_allow_html=True)
-        b.markdown(card("Vina score", "%.2f" % r["score"], "rank %d of %d" % (rank, len(df)), delay=0.2),
+        a.markdown(card("True group", r["group"], r["dataset"], delay=0.2, size="small"),
                    unsafe_allow_html=True)
-        c, d = st.columns(2)
-        c.markdown(card("Asp25 contacts", int(r["asp25_contacts"]),
-                        "closest approach %.2f Å" % r["asp25_min_dist"], delay=0.4), unsafe_allow_html=True)
-        d.markdown(card("Rule verdict", "HIV-like" if hit else "not HIV-like",
-                        "correct call" if good else "wrong call", bad=not good, delay=0.6),
-                   unsafe_allow_html=True)
+        b.markdown(card("Vina score", "%.2f" % r["score"], "rank %d of %d" % (rank, len(df)),
+                        delay=0.4, size="small low"), unsafe_allow_html=True)
+        st.markdown(card("Asp25 contacts", int(r["asp25_contacts"]),
+                         "closest approach %.2f Å" % r["asp25_min_dist"], delay=0.6, size="small"),
+                    unsafe_allow_html=True)
         st.markdown("**Score test:** %.2f against a cutoff of %.1f, **%s**"
                     % (r["score"], score_cut, "pass" if r["score"] <= score_cut else "fail"))
         st.markdown("**Contact test:** %d against a minimum of %d, **%s**"
@@ -473,9 +513,7 @@ else:
         show_viewer(pick)
 
 st.markdown('<div class="foot">Educational project · Docking scores are estimates, '
-            'not measurements of drug strength</div>', unsafe_allow_html=True)
-
-# ---------- building animation: cursors place each block on the page, from the top ----------
+            'not measurements of drug strength</div>', unsafe_allow_html=True)# ---------- building animation: cursors place each block on the page, from the top ----------
 ANIM = """
 <script>
 // step __STEP__
@@ -843,7 +881,7 @@ HELIX_B = """
         var d = dust[i], dy = (((d.y - t * d.v) % 1) + 1) % 1;
         glow(d.x * W, dy * H, d.r * 3, COL[d.c], 0.16 + 0.12 * Math.sin(t / 1500 + d.ph));
       }
-      ctx.save(); ctx.translate(W * 0.5, H * 0.5); ctx.rotate(0.21);
+      ctx.save(); ctx.translate(W - 130, H * 0.5); ctx.rotate(0.21);
       var pts = [];
       for (i = 0; i < N; i++) {
         var y = (i - N / 2) * STEP, pair = [];
