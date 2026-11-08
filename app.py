@@ -229,44 +229,6 @@ st.markdown(GLASS_BASE + GLASS_DONE + GLASS_ACTIVE, unsafe_allow_html=True)
 # ---------- DNA helix background ----------
 HELIX_STYLE = "B"   # "A" = CSS 3D helix, "B" = canvas helix, "off" = none
 
-HELIX_CSS = """
-<style>
-[data-testid="stMainBlockContainer"] {position: relative; z-index: 0;}
-@keyframes hxspin {from {transform: rotateY(0deg);} to {transform: rotateY(360deg);}}
-@keyframes hxdepth {0% {opacity: 1;} 25% {opacity: .55;} 50% {opacity: .18;} 75% {opacity: .55;} 100% {opacity: 1;}}
-.hx-wrap {position: fixed; top: -60px; right: 40px; width: 240px; height: 125vh; perspective: 900px;
-          pointer-events: none; z-index: -1; transform: rotateZ(12deg); transform-origin: 50% 0;}
-.hx {position: absolute; left: 50%; top: 0; width: 0; height: 0; transform-style: preserve-3d;
-     animation: hxspin 42s linear infinite;}
-.hx-dot {position: absolute; left: 0; border-radius: 50%; animation: hxdepth 42s linear infinite;}
-.hx-rung {position: absolute; left: -78px; width: 156px; height: 2px; opacity: 0.30;
-          background: linear-gradient(90deg, #2F9E6B, #22A6B3);}
-@media (max-width: 900px) {.hx-wrap {display: none;}}
-@media (prefers-reduced-motion: reduce) {.hx, .hx-dot {animation: none !important;}}
-</style>
-"""
-
-
-def helix_html(n=42, step=27, turn=24, radius=78, period=42):
-    out = []
-    for i in range(n):
-        y = i * step
-        if i % 2 == 0:
-            out.append('<i class="hx-rung" style="top:%dpx;transform:rotateY(%ddeg)"></i>' % (y, i * turn))
-        for off, col in ((0, "#2F9E6B"), (180, "#22A6B3")):
-            ang = i * turn + off
-            size = 8 + (i % 3) * 2
-            delay = -((ang % 360) / 360.0) * period
-            out.append(
-                '<i class="hx-dot" style="top:%dpx;margin:-%dpx 0 0 -%dpx;width:%dpx;height:%dpx;'
-                'background:%s;box-shadow:0 0 10px 2px %s88;'
-                'transform:rotateY(%ddeg) translateZ(%dpx);animation-delay:%.2fs"></i>'
-                % (y, size // 2, size // 2, size, size, col, col, ang, radius, delay))
-    return '<div class="hx-wrap"><div class="hx">' + "".join(out) + "</div></div>"
-
-
-if HELIX_STYLE == "A":
-    st.markdown(HELIX_CSS + helix_html(), unsafe_allow_html=True)
 
 def card(label, value, sub="", bad=False, delay=0.0):
     return ('<div class="card%s" style="animation-delay:%.2fs"><div class="label">%s</div>'
@@ -881,7 +843,7 @@ HELIX_B = """
         var d = dust[i], dy = (((d.y - t * d.v) % 1) + 1) % 1;
         glow(d.x * W, dy * H, d.r * 3, COL[d.c], 0.16 + 0.12 * Math.sin(t / 1500 + d.ph));
       }
-      ctx.save(); ctx.translate(W - 150, H * 0.5); ctx.rotate(0.21);
+      ctx.save(); ctx.translate(W * 0.5, H * 0.5); ctx.rotate(0.21);
       var pts = [];
       for (i = 0; i < N; i++) {
         var y = (i - N / 2) * STEP, pair = [];
@@ -898,7 +860,7 @@ HELIX_B = """
       var all = [];
       pts.forEach(function (pr) { all.push(pr[0], pr[1]); });
       all.sort(function (m, n) { return m.z - n.z; });
-      all.forEach(function (q) { glow(q.x, q.y, q.r * 2.6, COL[q.s], 0.22 + 0.55 * (q.z + R) / (2 * R)); });
+      all.forEach(function (q) { glow(q.x, q.y, q.r * 2.6, COL[q.s], 0.12 + 0.32 * (q.z + R) / (2 * R)); });
       ctx.restore();
     }
     var last = 0;
