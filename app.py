@@ -8,7 +8,7 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 ROOT = Path(__file__).resolve().parent
-ANIMATE = False  # set to True to switch the page-building animation on
+ANIMATE = True  # set to True to switch the page-building animation on
 POSES = ROOT / "poses"
 
 st.set_page_config(page_title="HIV Protease Docking Screen", layout="wide",
@@ -301,6 +301,53 @@ CLEAN_DONE = "".join(
     for i in range(step))
 st.markdown(CLEAN_CSS + CLEAN_DONE + "</style>", unsafe_allow_html=True)
 
+# ---------- sidebar styling (vertical workflow list) ----------
+SIDE_CSS = """
+<style>
+div.stApp section[data-testid="stSidebar"] {display: flex !important; visibility: visible !important; transform: none !important;}
+div.stApp [data-testid="stSidebarCollapseButton"], div.stApp [data-testid="stSidebarCollapsedControl"], div.stApp [data-testid="collapsedControl"] {display: none !important;}
+div.stApp section[data-testid="stSidebar"] {width: 250px !important; min-width: 250px !important;
+       background: #FBFCFA !important; border-right: 1px solid #D8E2DA;}
+div.stApp section[data-testid="stSidebar"] > div {padding-top: 1rem;}
+.side-brand {padding: 4px 4px 14px 4px; border-bottom: 1px dashed #D8E2DA; margin-bottom: 14px;}
+.side-eyebrow {font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 0.68rem;
+       letter-spacing: 2px; color: #2F7A4E; font-weight: 600;}
+.side-title {font-family: 'Lora', serif; font-size: 1.35rem; color: #15493A; font-weight: 700; line-height: 1.2;}
+.side-label {font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 0.68rem;
+       letter-spacing: 2px; color: #7A8A7F; margin: 16px 0 6px 4px;}
+
+div.stApp section[data-testid="stSidebar"] div[class*="st-key-stepbtn_"] {width: 100% !important;}
+div.stApp section[data-testid="stSidebar"] div[class*="st-key-stepbtn_"] button {
+       width: 100% !important; justify-content: flex-start !important; text-align: left !important;
+       border: none !important; border-left: 3px solid transparent !important; border-top: none !important;
+       border-radius: 6px !important; padding: 10px 12px !important; margin-bottom: 2px;
+       background: transparent !important; color: #5B6B60 !important; box-shadow: none !important;}
+div.stApp section[data-testid="stSidebar"] div[class*="st-key-stepbtn_"] button:hover {
+       background: #EEF3EC !important; color: #1D4D35 !important;}
+div.stApp section[data-testid="stSidebar"] div[class*="st-key-stepbtn_"] button[kind="primary"],
+div.stApp section[data-testid="stSidebar"] div[class*="st-key-stepbtn_"] button[data-testid="stBaseButton-primary"],
+div.stApp section[data-testid="stSidebar"] div[class*="st-key-stepbtn_"] button[kind="primary"]:hover,
+div.stApp section[data-testid="stSidebar"] div[class*="st-key-stepbtn_"] button[data-testid="stBaseButton-primary"]:hover {
+       background: #E6F2EA !important; color: #14532D !important; border: none !important;
+       border-left: 3px solid #2F7A4E !important; box-shadow: none !important;}
+div.stApp section[data-testid="stSidebar"] div[class*="st-key-stepbtn_"] button[kind="primary"] p,
+div.stApp section[data-testid="stSidebar"] div[class*="st-key-stepbtn_"] button[data-testid="stBaseButton-primary"] p {
+       font-weight: 700 !important;}
+
+div.stApp section[data-testid="stSidebar"] div.st-key-navback,
+div.stApp section[data-testid="stSidebar"] div.st-key-navnext {
+       position: static !important; width: 100% !important;}
+div.stApp section[data-testid="stSidebar"] div.st-key-navback button,
+div.stApp section[data-testid="stSidebar"] div.st-key-navnext button {
+       width: 100% !important; height: 40px !important;}
+"""
+
+# finished steps: green text
+SIDE_DONE = "".join(
+    'div.stApp section[data-testid="stSidebar"] div.st-key-stepbtn_%d button, '
+    'div.stApp section[data-testid="stSidebar"] div.st-key-stepbtn_%d button:hover '
+    '{color: #2F7A4E !important;}' % (i, i) for i in range(step))
+st.markdown(SIDE_CSS + SIDE_DONE + "</style>", unsafe_allow_html=True)
 # ---------- DNA helix background ----------
 HELIX_STYLE = "off"   # "A" = CSS 3D helix, "B" = canvas helix, "off" = none
 
@@ -329,18 +376,19 @@ st.markdown(
     '<p>AutoDock Vina · RDKit · catalytic Asp25 contact check · %d chemicals in two test sets</p></div>' % len(df),
     unsafe_allow_html=True)
 
-# click any step directly ...
-pill_cols = st.columns(4)
-for i, name in enumerate(STEPS):
-    label = ("✓ " if i < step else "") + "%d · %s" % (i + 1, name)
-    pill_cols[i].button(label, key="stepbtn_%d" % i, on_click=jump, args=(i,),
-                        type="primary" if i == step else "secondary")
-
-# ... or use Back / Next
-n1, n2, n3 = st.columns([1, 4, 1])
-n1.button("←", key="navback", help="Back", on_click=go, args=(-1,), disabled=(step == 0))
-n3.button("→", key="navnext", help="Next", on_click=go, args=(1,), disabled=(step == len(STEPS) - 1))
-
+# ---------- sidebar: the workflow is always visible ----------
+with st.sidebar:
+    st.markdown('<div class="side-brand"><div class="side-eyebrow">HIV-1 PROTEASE</div>'
+                '<div class="side-title">Docking Screen</div></div>', unsafe_allow_html=True)
+    st.markdown('<div class="side-label">WORKFLOW</div>', unsafe_allow_html=True)
+    for i, name in enumerate(STEPS):
+        label = ("✓ " if i < step else "") + "%d · %s" % (i + 1, name)
+        st.button(label, key="stepbtn_%d" % i, on_click=jump, args=(i,),
+                  type="primary" if i == step else "secondary")
+    st.markdown('<div class="side-label">MOVE</div>', unsafe_allow_html=True)
+    nb1, nb2 = st.columns(2)
+    nb1.button("←", key="navback", help="Back", on_click=go, args=(-1,), disabled=(step == 0))
+    nb2.button("→", key="navnext", help="Next", on_click=go, args=(1,), disabled=(step == len(STEPS) - 1))
 
 def set_cards(name):
     part = df[df["dataset"] == name]
