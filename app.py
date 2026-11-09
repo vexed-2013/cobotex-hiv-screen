@@ -923,7 +923,7 @@ FX2 = """
   try {
     var P = window.parent, D = P.document;
     var run = (P.__fx2Run = (P.__fx2Run || 0) + 1);
-    var ON = {lift: true, sparks: true, glow: true, grain: true};
+    var ON = {lift: true, sparks: true, glow: false, grain: true};
     var reduce = P.matchMedia && P.matchMedia("(prefers-reduced-motion: reduce)").matches;
     ["fx2-style", "fx2-glow", "fx2-grain"].forEach(function (id) {
       var o = D.getElementById(id); if (o) o.remove();
