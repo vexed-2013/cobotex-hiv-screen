@@ -35,13 +35,13 @@ VIEW_DELAY = 2400 if (ANIMATE and arrived) else 150
 
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Lora:wght@500;700&family=Source+Sans+3:wght@400;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&display=swap');
 [data-testid="stSidebar"], [data-testid="collapsedControl"], [data-testid="stSidebarCollapsedControl"],
 [data-testid="stToolbar"], [data-testid="stSidebarNav"], footer {display: none !important;}
 header[data-testid="stHeader"] {background: transparent;}
 .block-container {padding-top: 1.5rem; max-width: 1200px;}
-.stApp, .stApp p, .stApp li, .stApp label, .stApp button, .stApp input {font-family: 'Source Sans 3', sans-serif;}
-.stApp h1, .stApp h2, .stApp h3, .stApp h4, .hero h1, .setname {font-family: 'Lora', serif;}
+.stApp, .stApp p, .stApp li, .stApp label, .stApp button, .stApp input {font-family: 'Barlow', sans-serif;}
+.stApp h1, .stApp h2, .stApp h3, .stApp h4, .hero h1, .setname {font-family: 'Barlow', sans-serif;}
 
 /* banner: soft sage instead of deep green */
 .hero {border-radius: 16px; padding: 26px 30px; margin-bottom: 14px;
@@ -439,7 +439,7 @@ The shaded zone is the rule that was chosen here and then locked: **score ≤ -8
         fig.update_xaxes(range=[-4.5, -12.5])
         fig.update_yaxes(range=[-0.7, 6.7])
         fig.update_traces(marker=dict(size=14, line=dict(width=1, color="#FFFFFF")))
-        fig.update_layout(height=460, paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
+        fig.update_layout(font_family="Barlow", height=460, paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
         st.plotly_chart(fig)
 
 # ---------- step 3: test ----------
@@ -923,7 +923,7 @@ FX2 = """
   try {
     var P = window.parent, D = P.document;
     var run = (P.__fx2Run = (P.__fx2Run || 0) + 1);
-    var ON = {lift: true, sparks: true, glow: true, grain: true};
+    var ON = {lift: true, sparks: true, glow: false, grain: true};
     var reduce = P.matchMedia && P.matchMedia("(prefers-reduced-motion: reduce)").matches;
     ["fx2-style", "fx2-glow", "fx2-grain"].forEach(function (id) {
       var o = D.getElementById(id); if (o) o.remove();
