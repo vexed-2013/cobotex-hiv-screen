@@ -40,7 +40,7 @@ st.markdown("""
 [data-testid="stToolbar"], [data-testid="stSidebarNav"], footer {display: none !important;}
 header[data-testid="stHeader"] {background: transparent;}
 .block-container {padding-top: 1.5rem; max-width: 1200px;}
-.stApp, .stApp p, .stApp li, .stApp label, .stApp button, .stApp input {font-family: 'Source Sans 3', sans-serif;}
+.stApp, .stApp p, .stApp li, .stApp label, .stApp button, .stApp input {font-family: 'Barlow', sans-serif;}
 .stApp h1, .stApp h2, .stApp h3, .stApp h4, .hero h1, .setname {font-family: 'Lora', serif;}
 
 /* banner: soft sage instead of deep green */
@@ -439,7 +439,7 @@ The shaded zone is the rule that was chosen here and then locked: **score ≤ -8
         fig.update_xaxes(range=[-4.5, -12.5])
         fig.update_yaxes(range=[-0.7, 6.7])
         fig.update_traces(marker=dict(size=14, line=dict(width=1, color="#FFFFFF")))
-        fig.update_layout(height=460, paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
+        fig.update_layout(font_family="Barlow", height=460, paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
         st.plotly_chart(fig)
 
 # ---------- step 3: test ----------
