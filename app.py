@@ -41,8 +41,8 @@ st.markdown("""
 [data-testid="stSidebarCollapsedControl"], [data-testid="collapsedControl"], footer {display: none !important;}
 header[data-testid="stHeader"] {background: transparent;}
 .block-container {padding-top: 1.5rem; max-width: 1200px;}
-.stApp, .stApp p, .stApp li, .stApp label, .stApp button, .stApp input {font-family: 'Source Sans 3', sans-serif;}
-.stApp h1, .stApp h2, .stApp h3, .stApp h4, .hero h1, .setname {font-family: 'Lora', serif;}
+.stApp, .stApp p, .stApp li, .stApp label, .stApp button, .stApp input {font-family: 'Barlow', sans-serif;}
+.stApp h1, .stApp h2, .stApp h3, .stApp h4, .hero h1, .setname {font-family: 'Barlow', sans-serif;}
 
 /* banner: soft sage instead of deep green */
 .hero {border-radius: 16px; padding: 26px 30px; margin-bottom: 14px;
@@ -313,7 +313,7 @@ div.stApp section[data-testid="stSidebar"] > div {padding-top: 1rem;}
 .side-brand {padding: 4px 4px 14px 4px; border-bottom: 1px dashed #D8E2DA; margin-bottom: 14px;}
 .side-eyebrow {font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 0.68rem;
        letter-spacing: 2px; color: #2F7A4E; font-weight: 600;}
-.side-title {font-family: 'Lora', serif; font-size: 1.35rem; color: #15493A; font-weight: 700; line-height: 1.2;}
+.side-title {font-family: 'Barlow', sans-serif; font-size: 1.35rem; color: #15493A; font-weight: 700; line-height: 1.2;}
 .side-label {font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 0.68rem;
        letter-spacing: 2px; color: #7A8A7F; margin: 16px 0 6px 4px;}
 
@@ -355,9 +355,9 @@ div.stApp section[data-testid="stSidebar"] {background: #F5F2EA !important; bord
 .card.nb {background: transparent !important; border: none !important; border-radius: 0 !important;
           box-shadow: none !important; padding: 4px 6px 10px 0 !important; margin: 0 0 8px 0 !important;}
 .nb-cap {font-size: 0.9rem; color: #6B6A5E; margin-bottom: 2px;}
-.nb-big {font-family: 'Lora', serif; font-size: 3.4rem; font-weight: 700; color: #14532D; line-height: 1.05;}
+.nb-big {font-family: 'Barlow', sans-serif; font-size: 3.4rem; font-weight: 700; color: #14532D; line-height: 1.05;}
 .nb-big span {font-size: 1.6rem; color: #4B5F52; font-weight: 500;}
-.nb-note {font-family: 'Lora', serif; font-style: italic; font-size: 0.95rem; color: #5B5A50; margin-top: 4px;}
+.nb-note {font-family: 'Barlow', sans-serif; font-style: italic; font-size: 0.95rem; color: #5B5A50; margin-top: 4px;}
 .nb-note.bad {color: #C2410C;}
 
 /* Validate: a drawn scale from 0 to 2 Angstrom */
@@ -375,7 +375,7 @@ div.stApp section[data-testid="stSidebar"] {background: #F5F2EA !important; bord
 /* Screen: ledger lines with dotted leaders */
 .lead {display: flex; align-items: baseline; gap: 6px; font-size: 1rem; color: #3A4A40; margin: 7px 0;}
 .lead i {flex: 1; border-bottom: 1.5px dotted #A9A493; transform: translateY(-3px);}
-.lead b {font-family: 'Lora', serif; font-size: 1.15rem; color: #14532D; white-space: nowrap;}
+.lead b {font-family: 'Barlow', sans-serif; font-size: 1.15rem; color: #14532D; white-space: nowrap;}
 .lead small {font-size: 0.78rem; color: #7A7968;}
 .lead.bad b {color: #C2410C;}
 
@@ -387,17 +387,17 @@ div.stApp section[data-testid="stSidebar"] {background: #F5F2EA !important; bord
 .mk.bad u {background: #C2410C;}
 .mk em {font-style: normal; font-size: 0.72rem; color: #C2410C; margin-top: 3px; white-space: nowrap;}
 .nb-line {margin-top: 12px; padding-top: 8px; border-top: 1px dashed #CFC9B8; font-size: 0.95rem; color: #3A4A40;}
-.nb-line b {font-family: 'Lora', serif; color: #14532D; font-size: 1.05rem;}
+.nb-line b {font-family: 'Barlow', sans-serif; color: #14532D; font-size: 1.05rem;}
 .nb-line b.bad {color: #C2410C;}
 
 /* Explore: stamp, specimen tag, figure caption */
-.stamp {display: inline-block; font-family: 'Lora', serif; font-weight: 700; font-size: 1.7rem; color: #14532D;
+.stamp {display: inline-block; font-family: 'Barlow', sans-serif; font-weight: 700; font-size: 1.7rem; color: #14532D;
         border: 2.5px solid #14532D; border-radius: 4px; padding: 2px 14px; transform: rotate(-2deg); margin: 8px 0 4px 4px;}
 .stamp.bad {color: #C2410C; border-color: #C2410C;}
 .card.nb.tag {background: #FFFDF8 !important; border: 1px dashed #B9B4A2 !important; padding: 10px 16px !important;}
 .card.nb.tag .lead {font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 0.88rem;}
 .card.nb.tag .lead b {font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 0.92rem;}
-.figcap {font-family: 'Lora', serif; font-style: italic; font-size: 0.92rem; color: #5B5A50; margin: 2px 0 6px 2px;}
+.figcap {font-family: 'Barlow', sans-serif; font-style: italic; font-size: 0.92rem; color: #5B5A50; margin: 2px 0 6px 2px;}
 .figcap b {font-style: normal;}
 
 @media (max-width: 800px) {.nb-big {font-size: 2.6rem;}}
