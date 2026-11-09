@@ -1,3 +1,4 @@
+import html
 import json
 from pathlib import Path
 
@@ -8,11 +9,11 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 ROOT = Path(__file__).resolve().parent
-ANIMATE = True  # set to True to switch the page-building animation on
+ANIMATE = True  # set to False to switch the page-building animation off
 POSES = ROOT / "poses"
 
 st.set_page_config(page_title="HIV Protease Docking Screen", layout="wide",
-                   initial_sidebar_state="collapsed")
+                   initial_sidebar_state="expanded")
 
 # ---------- step state (set before drawing so the buttons can show progress) ----------
 STEPS = ["Validate", "Screen", "Test", "Explore"]
@@ -35,9 +36,9 @@ VIEW_DELAY = 2400 if (ANIMATE and arrived) else 150
 
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Lora:wght@500;700&family=Source+Sans+3:wght@400;600;700&display=swap');
-[data-testid="stSidebar"], [data-testid="collapsedControl"], [data-testid="stSidebarCollapsedControl"],
-[data-testid="stToolbar"], [data-testid="stSidebarNav"], footer {display: none !important;}
+@import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;0,700;1,500&family=Source+Sans+3:wght@400;600;700&display=swap');
+[data-testid="stToolbar"], [data-testid="stSidebarNav"], [data-testid="stSidebarCollapseButton"],
+[data-testid="stSidebarCollapsedControl"], [data-testid="collapsedControl"], footer {display: none !important;}
 header[data-testid="stHeader"] {background: transparent;}
 .block-container {padding-top: 1.5rem; max-width: 1200px;}
 .stApp, .stApp p, .stApp li, .stApp label, .stApp button, .stApp input {font-family: 'Source Sans 3', sans-serif;}
@@ -333,13 +334,6 @@ div.stApp section[data-testid="stSidebar"] div[class*="st-key-stepbtn_"] button[
 div.stApp section[data-testid="stSidebar"] div[class*="st-key-stepbtn_"] button[kind="primary"] p,
 div.stApp section[data-testid="stSidebar"] div[class*="st-key-stepbtn_"] button[data-testid="stBaseButton-primary"] p {
        font-weight: 700 !important;}
-
-div.stApp section[data-testid="stSidebar"] div.st-key-navback,
-div.stApp section[data-testid="stSidebar"] div.st-key-navnext {
-       position: static !important; width: 100% !important;}
-div.stApp section[data-testid="stSidebar"] div.st-key-navback button,
-div.stApp section[data-testid="stSidebar"] div.st-key-navnext button {
-       width: 100% !important; height: 40px !important;}
 """
 
 # finished steps: green text
@@ -348,6 +342,69 @@ SIDE_DONE = "".join(
     'div.stApp section[data-testid="stSidebar"] div.st-key-stepbtn_%d button:hover '
     '{color: #2F7A4E !important;}' % (i, i) for i in range(step))
 st.markdown(SIDE_CSS + SIDE_DONE + "</style>", unsafe_allow_html=True)
+
+# ---------- lab-notebook look: each kind of result gets its own treatment ----------
+NOTE_CSS = """
+<style>
+div.stApp {background: #FAF8F3 !important;}
+div.stApp section[data-testid="stSidebar"] {background: #F5F2EA !important; border-right: 1px solid #E2DDCD !important;}
+.hero {background: #FFFDF8 !important; border: 1px solid #E2DDCD !important; border-left: 4px solid #2F7A4E !important;}
+.block-container {padding-top: 0.8rem !important;}
+
+/* notebook blocks: no box, no coloured border */
+.card.nb {background: transparent !important; border: none !important; border-radius: 0 !important;
+          box-shadow: none !important; padding: 4px 6px 10px 0 !important; margin: 0 0 8px 0 !important;}
+.nb-cap {font-size: 0.9rem; color: #6B6A5E; margin-bottom: 2px;}
+.nb-big {font-family: 'Lora', serif; font-size: 3.4rem; font-weight: 700; color: #14532D; line-height: 1.05;}
+.nb-big span {font-size: 1.6rem; color: #4B5F52; font-weight: 500;}
+.nb-note {font-family: 'Lora', serif; font-style: italic; font-size: 0.95rem; color: #5B5A50; margin-top: 4px;}
+.nb-note.bad {color: #C2410C;}
+
+/* Validate: a drawn scale from 0 to 2 Angstrom */
+.scale {position: relative; height: 62px; margin: 12px 0 6px 0;}
+.scale .track {position: absolute; left: 0; right: 0; top: 32px; height: 2px; background: #C4BFAE;}
+.scale .fill {position: absolute; left: 0; top: 31px; height: 4px; background: #2F7A4E;}
+.scale .tick {position: absolute; top: 27px; width: 2px; height: 12px; background: #8F8A78;}
+.scale .tl {position: absolute; top: 44px; font-size: 0.76rem; color: #6B6A5E; transform: translateX(-50%); white-space: nowrap;}
+.scale .tl.start {transform: none;}
+.scale .tl.end {transform: translateX(-100%);}
+.scale .pin {position: absolute; top: 20px; width: 3px; height: 26px; background: #14532D; margin-left: -1px;}
+.scale .pl {position: absolute; top: 2px; font-size: 0.82rem; font-weight: 700; color: #14532D;
+            transform: translateX(-50%); white-space: nowrap;}
+
+/* Screen: ledger lines with dotted leaders */
+.lead {display: flex; align-items: baseline; gap: 6px; font-size: 1rem; color: #3A4A40; margin: 7px 0;}
+.lead i {flex: 1; border-bottom: 1.5px dotted #A9A493; transform: translateY(-3px);}
+.lead b {font-family: 'Lora', serif; font-size: 1.15rem; color: #14532D; white-space: nowrap;}
+.lead small {font-size: 0.78rem; color: #7A7968;}
+.lead.bad b {color: #C2410C;}
+
+/* Test: one mark per chemical */
+.tl-top {display: flex; gap: 32px; align-items: flex-end; flex-wrap: wrap;}
+.marks {display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-start; padding-bottom: 4px;}
+.mk {display: flex; flex-direction: column; align-items: center; min-width: 22px;}
+.mk u {display: block; width: 22px; height: 22px; border-radius: 3px; background: #2F7A4E; text-decoration: none;}
+.mk.bad u {background: #C2410C;}
+.mk em {font-style: normal; font-size: 0.72rem; color: #C2410C; margin-top: 3px; white-space: nowrap;}
+.nb-line {margin-top: 12px; padding-top: 8px; border-top: 1px dashed #CFC9B8; font-size: 0.95rem; color: #3A4A40;}
+.nb-line b {font-family: 'Lora', serif; color: #14532D; font-size: 1.05rem;}
+.nb-line b.bad {color: #C2410C;}
+
+/* Explore: stamp, specimen tag, figure caption */
+.stamp {display: inline-block; font-family: 'Lora', serif; font-weight: 700; font-size: 1.7rem; color: #14532D;
+        border: 2.5px solid #14532D; border-radius: 4px; padding: 2px 14px; transform: rotate(-2deg); margin: 8px 0 4px 4px;}
+.stamp.bad {color: #C2410C; border-color: #C2410C;}
+.card.nb.tag {background: #FFFDF8 !important; border: 1px dashed #B9B4A2 !important; padding: 10px 16px !important;}
+.card.nb.tag .lead {font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 0.88rem;}
+.card.nb.tag .lead b {font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 0.92rem;}
+.figcap {font-family: 'Lora', serif; font-style: italic; font-size: 0.92rem; color: #5B5A50; margin: 2px 0 6px 2px;}
+.figcap b {font-style: normal;}
+
+@media (max-width: 800px) {.nb-big {font-size: 2.6rem;}}
+</style>
+"""
+st.markdown(NOTE_CSS, unsafe_allow_html=True)
+
 # ---------- DNA helix background ----------
 HELIX_STYLE = "off"   # "A" = CSS 3D helix, "B" = canvas helix, "off" = none
 
@@ -356,6 +413,74 @@ def card(label, value, sub="", bad=False, delay=0.0, size=""):
     return ('<div class="card%s%s" style="animation-delay:%.2fs"><div class="label">%s</div>'
             '<div class="value">%s</div><div class="sub">%s</div></div>'
             % (" bad" if bad else "", (" " + size) if size else "", delay, label, value, sub))
+
+
+# ---------- notebook blocks (all values come from the data or the fixed validation result) ----------
+def ruler_card(rmsd, limit):
+    pct = max(0.0, min(100.0, rmsd / limit * 100.0))
+    return ('<div class="card nb ruler"><div class="nb-cap">Re-docking test: indinavir vs the experimental pose</div>'
+            '<div class="nb-big">%.2f <span>Å</span></div>'
+            '<div class="scale"><div class="track"></div><div class="fill" style="width:%.1f%%"></div>'
+            '<div class="tick" style="left:0"></div><div class="tick" style="left:50%%"></div>'
+            '<div class="tick" style="left:calc(100%% - 2px)"></div>'
+            '<div class="pin" style="left:%.1f%%"></div><div class="pl" style="left:%.1f%%">%.2f Å</div>'
+            '<div class="tl start" style="left:0">0</div><div class="tl" style="left:50%%">1 Å</div>'
+            '<div class="tl end" style="left:100%%">2 Å limit</div></div>'
+            '<div class="nb-note">✓ Validated: pose reproduced. Success threshold &lt; 2 Å (standard cutoff).</div></div>'
+            % (rmsd, pct, pct, pct, rmsd))
+
+
+def ledger_card(part):
+    hiv = part[part["group"] == "HIV drug"]
+    non = part[part["group"] != "HIV drug"]
+    return ('<div class="card nb ledger"><div class="nb-big">%d / %d</div>'
+            '<div class="nb-note">correct overall, used to choose the rule</div>'
+            '<div class="lead%s"><span>HIV drugs found <small>true positives</small></span><i></i><b>%d / %d</b></div>'
+            '<div class="lead%s"><span>Non-HIV rejected <small>true negatives</small></span><i></i><b>%d / %d</b></div></div>'
+            % (part["correct"].sum(), len(part),
+               "" if hiv["correct"].all() else " bad", hiv["correct"].sum(), len(hiv),
+               "" if non["correct"].all() else " bad", non["correct"].sum(), len(non)))
+
+
+def tally_card(part):
+    hiv = part[part["group"] == "HIV drug"]
+    non = part[part["group"] != "HIV drug"]
+    ordered = part.assign(_h=(part["group"] == "HIV drug")).sort_values(["_h", "score"], ascending=[False, True])
+    marks = ""
+    for _, r in ordered.iterrows():
+        name = html.escape(str(r["chemical"]))
+        tip = "%s: %s" % (name, r["verdict"])
+        if r["correct"]:
+            marks += '<div class="mk" title="%s"><u></u></div>' % tip
+        else:
+            marks += '<div class="mk bad" title="%s"><u></u><em>%s</em></div>' % (tip, name)
+    return ('<div class="card nb tally"><div class="tl-top"><div>'
+            '<div class="nb-big">%d / %d</div>'
+            '<div class="nb-note">correct overall, never used to choose the rule</div></div>'
+            '<div class="marks">%s</div></div>'
+            '<div class="nb-line">HIV drugs found <b class="%s">%d / %d</b> (true positives) &nbsp;·&nbsp; '
+            'Non-HIV rejected <b class="%s">%d / %d</b> (true negatives)</div></div>'
+            % (part["correct"].sum(), len(part), marks,
+               "" if hiv["correct"].all() else "bad", hiv["correct"].sum(), len(hiv),
+               "" if non["correct"].all() else "bad", non["correct"].sum(), len(non)))
+
+
+def verdict_card(hit, good):
+    return ('<div class="card nb verdict"><div class="nb-cap">Rule verdict</div>'
+            '<div class="stamp%s">%s</div><div class="nb-note%s">%s</div></div>'
+            % ("" if good else " bad", "HIV-like" if hit else "not HIV-like",
+               "" if good else " bad", "correct call" if good else "wrong call"))
+
+
+def tag_card(r, rank, n):
+    rows = [("True group", r["group"]), ("Dataset", r["dataset"]),
+            ("Vina score", "%.2f" % r["score"]), ("Score rank", "%d of %d" % (rank, n)),
+            ("Asp25 contacts", "%d" % int(r["asp25_contacts"])),
+            ("Closest approach", "%.2f Å" % r["asp25_min_dist"])]
+    return ('<div class="card nb tag">'
+            + "".join('<div class="lead"><span>%s</span><i></i><b>%s</b></div>' % (a, html.escape(str(b)))
+                      for a, b in rows)
+            + '</div>')
 
 
 @st.cache_data
@@ -385,10 +510,7 @@ with st.sidebar:
         label = ("✓ " if i < step else "") + "%d · %s" % (i + 1, name)
         st.button(label, key="stepbtn_%d" % i, on_click=jump, args=(i,),
                   type="primary" if i == step else "secondary")
-    st.markdown('<div class="side-label">MOVE</div>', unsafe_allow_html=True)
-    nb1, nb2 = st.columns(2)
-    nb1.button("←", key="navback", help="Back", on_click=go, args=(-1,), disabled=(step == 0))
-    nb2.button("→", key="navnext", help="Next", on_click=go, args=(1,), disabled=(step == len(STEPS) - 1))
+
 
 def set_cards(name):
     part = df[df["dataset"] == name]
@@ -486,6 +608,8 @@ def show_viewer(name):
         st.warning("Pose file not found for " + name)
         return
     components.html(viewer_html(name, VIEW_DELAY), height=460)
+    st.markdown('<div class="figcap"><b>Fig.</b> Docked pose of %s in the HIV-1 protease pocket.</div>'
+                % html.escape(name), unsafe_allow_html=True)
     st.caption("Ribbon: protease. Amber sticks: catalytic Asp25. Green: docked drug. "
                "It spins until you touch it, then starts again after a minute of inactivity. "
                "Drag to rotate, scroll to zoom.")
@@ -494,11 +618,8 @@ def show_viewer(name):
 # ---------- step 1: validate ----------
 if step == 0:
     st.markdown("### Step 1: Does the pipeline find a known answer?")
-    a, b, c = st.columns([1.6, 1, 1])
-    a.markdown(card("Re-dock RMSD", "0.93 Å", "indinavir vs the experimental pose", size="big"), unsafe_allow_html=True)
-    b.markdown(card("Success threshold", "&lt; 2 Å", "standard cutoff", delay=0.25, size="small"), unsafe_allow_html=True)
-    c.markdown(card("Outcome", "Validated", "pose reproduced", delay=0.5, size="small low"), unsafe_allow_html=True)
-    text_col, _spare = st.columns([1.5, 1])
+    res_col, text_col = st.columns([1.25, 1])
+    res_col.markdown(ruler_card(0.93, 2.0), unsafe_allow_html=True)
     with text_col:
         st.markdown("""
 Before trusting the tool on unknown chemicals, it has to find a known answer. Indinavir was taken out of
@@ -515,17 +636,9 @@ elif step == 1:
     st.markdown("### Step 2: Can it separate drugs from non-drugs?")
     st.markdown('<div class="setname">Development set: 14 chemicals</div>', unsafe_allow_html=True)
     part = df[df["dataset"] == "development"]
-    hiv = part[part["group"] == "HIV drug"]
-    non = part[part["group"] != "HIV drug"]
-    a, b, c = st.columns([1, 1, 1.7])
-    a.markdown(card("HIV drugs found", "%d / %d" % (hiv["correct"].sum(), len(hiv)), "true positives",
-                    bad=not hiv["correct"].all(), size="small"), unsafe_allow_html=True)
-    b.markdown(card("Non-HIV rejected", "%d / %d" % (non["correct"].sum(), len(non)), "true negatives",
-                    bad=not non["correct"].all(), delay=0.25, size="small low"), unsafe_allow_html=True)
-    c.markdown(card("Correct overall", "%d / %d" % (part["correct"].sum(), len(part)),
-                    "used to choose the rule", delay=0.5, size="big"), unsafe_allow_html=True)
-    text_col, chart_col = st.columns([1, 2.2])
+    text_col, chart_col = st.columns([1.15, 2.2])
     with text_col:
+        st.markdown(ledger_card(part), unsafe_allow_html=True)
         st.markdown("""
 Score alone is not enough: large non-HIV drugs such as imatinib score better than amprenavir, because big
 molecules touch more of the protein. The contact check fixes this. HIV drugs reach the catalytic Asp25
@@ -556,19 +669,10 @@ The shaded zone is the rule that was chosen here and then locked: **score ≤ -8
 elif step == 2:
     st.markdown("### Step 3: Does the rule hold on chemicals it has never seen?")
     st.markdown('<div class="setname">Independent test set: 12 chemicals</div>', unsafe_allow_html=True)
-    part = df[df["dataset"] == "independent test"]
-    hiv = part[part["group"] == "HIV drug"]
-    non = part[part["group"] != "HIV drug"]
-    a, b, c = st.columns([1.7, 1, 1])
-    a.markdown(card("Correct overall", "%d / %d" % (part["correct"].sum(), len(part)),
-                    "never used to choose the rule", size="big"), unsafe_allow_html=True)
-    b.markdown(card("HIV drugs found", "%d / %d" % (hiv["correct"].sum(), len(hiv)), "true positives",
-                    bad=not hiv["correct"].all(), delay=0.25, size="small low"), unsafe_allow_html=True)
-    c.markdown(card("Non-HIV rejected", "%d / %d" % (non["correct"].sum(), len(non)), "true negatives",
-                    bad=not non["correct"].all(), delay=0.5, size="small"), unsafe_allow_html=True)
     ind = df[df["dataset"] == "independent test"].sort_values("score")
     tbl_col, lim_col = st.columns([2.3, 1])
     with tbl_col:
+        st.markdown(tally_card(ind), unsafe_allow_html=True)
         st.dataframe(ind[["chemical", "group", "heavy_atoms", "score", "asp25_min_dist",
                           "asp25_contacts", "verdict", "correct"]], hide_index=True)
     with lim_col:
@@ -584,7 +688,7 @@ elif step == 2:
 # ---------- step 4: explore ----------
 else:
     st.markdown("### Step 4: Explore any chemical")
-    s1, s2 = st.columns(2)
+    s1, s2 = st.columns([1.5, 1])
     score_cut = s1.slider("Vina score at or below (kcal/mol)", -12.0, -4.0, -8.0, 0.1)
     contact_cut = s2.slider("Minimum Asp25 contacts", 0, 6, 4)
     wi = (df["score"] <= score_cut) & (df["asp25_contacts"] >= contact_cut)
@@ -604,17 +708,8 @@ else:
 
     left, right = st.columns([1, 1.5])
     with left:
-        st.markdown(card("Rule verdict", "HIV-like" if hit else "not HIV-like",
-                         "correct call" if good else "wrong call", bad=not good, size="big"),
-                    unsafe_allow_html=True)
-        a, b = st.columns(2)
-        a.markdown(card("True group", r["group"], r["dataset"], delay=0.2, size="small"),
-                   unsafe_allow_html=True)
-        b.markdown(card("Vina score", "%.2f" % r["score"], "rank %d of %d" % (rank, len(df)),
-                        delay=0.4, size="small low"), unsafe_allow_html=True)
-        st.markdown(card("Asp25 contacts", int(r["asp25_contacts"]),
-                         "closest approach %.2f Å" % r["asp25_min_dist"], delay=0.6, size="small"),
-                    unsafe_allow_html=True)
+        st.markdown(verdict_card(hit, good), unsafe_allow_html=True)
+        st.markdown(tag_card(r, rank, len(df)), unsafe_allow_html=True)
         st.markdown("**Score test:** %.2f against a cutoff of %.1f, **%s**"
                     % (r["score"], score_cut, "pass" if r["score"] <= score_cut else "fail"))
         st.markdown("**Contact test:** %d against a minimum of %d, **%s**"
