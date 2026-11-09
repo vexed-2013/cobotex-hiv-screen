@@ -321,7 +321,7 @@ st.markdown(
 # click any step directly ...
 pill_cols = st.columns([1, 1, 1, 1, 2.2])[:4]
 for i, name in enumerate(STEPS):
-        label = name + "%d · %s" % (i + 1, name)
+    label = name
     pill_cols[i].button(label, key="stepbtn_%d" % i, on_click=jump, args=(i,),
                         type="primary" if i == step else "secondary")
 
