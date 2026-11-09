@@ -41,7 +41,7 @@ st.markdown("""
 header[data-testid="stHeader"] {background: transparent;}
 .block-container {padding-top: 1.5rem; max-width: 1200px;}
 .stApp, .stApp p, .stApp li, .stApp label, .stApp button, .stApp input {font-family: 'Barlow', sans-serif;}
-.stApp h1, .stApp h2, .stApp h3, .stApp h4, .hero h1, .setname {font-family: 'Lora', serif;}
+.stApp h1, .stApp h2, .stApp h3, .stApp h4, .hero h1, .setname {font-family: 'Barlow', sans-serif;}
 
 /* banner: soft sage instead of deep green */
 .hero {border-radius: 16px; padding: 26px 30px; margin-bottom: 14px;
