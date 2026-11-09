@@ -8,7 +8,7 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 ROOT = Path(__file__).resolve().parent
-ANIMATE = True  # set to False to switch the page-building animation off
+ANIMATE = False  # set to True to switch the page-building animation on
 POSES = ROOT / "poses"
 
 st.set_page_config(page_title="HIV Protease Docking Screen", layout="wide",
@@ -239,8 +239,70 @@ st.markdown("""
 @media (max-width: 800px) {.card.low {margin-top: 0;}}
 </style>
 """, unsafe_allow_html=True)
+# ---------- clean scientific look (overrides the earlier glass and gradient styles) ----------
+CLEAN_CSS = """
+<style>
+div.stApp {background: #F7F8F6 !important; background-attachment: scroll !important;}
+.block-container {max-width: 1320px !important; padding-top: 1rem !important;}
+
+/* banner: flat white panel, no aurora */
+.hero {background: #FFFFFF !important; border: 1px solid #D8E2DA !important;
+       border-left: 4px solid #2F7A4E !important; border-radius: 6px !important;
+       box-shadow: none !important; padding: 16px 24px !important; margin-bottom: 10px !important;}
+.hero::before {display: none !important;}
+.hero h1 {font-size: 1.9rem !important; color: #15493A !important;}
+
+/* cards: solid white, thin border, no blur, no glow, one baseline */
+.card {background: #FFFFFF !important; border: 1px solid #D8E2DA !important;
+       border-left: 4px solid #2F7A4E !important; border-radius: 6px !important;
+       box-shadow: none !important; animation: none !important;
+       -webkit-backdrop-filter: none !important; backdrop-filter: none !important;}
+.card.bad {border-left-color: #C2410C !important;}
+.card::before, .card::after {display: none !important;}
+.card .value {animation: none !important; text-shadow: none !important;}
+.card.big .value {font-size: 2.6rem !important;}
+.card.low {margin-top: 0 !important;}
+
+/* stepper: a progress line across the top of each step */
+div.stApp div[class*="st-key-stepbtn_"] button {
+       border-radius: 0 !important; background: transparent !important;
+       -webkit-backdrop-filter: none !important; backdrop-filter: none !important;
+       box-shadow: none !important; transform: none !important;
+       border: none !important; border-top: 4px solid #D5DDD7 !important;
+       padding: 10px 4px 6px 4px !important; justify-content: flex-start !important;
+       color: #6B7C70 !important;}
+div.stApp div[class*="st-key-stepbtn_"] button::before {display: none !important;}
+div.stApp div[class*="st-key-stepbtn_"] button p {
+       color: inherit !important; font-weight: 600 !important; font-size: 0.95rem !important;}
+div.stApp div[class*="st-key-stepbtn_"] button:hover {
+       color: #1D4D35 !important; border-top-color: #9CC4A8 !important; background: transparent !important;}
+div.stApp div[class*="st-key-stepbtn_"] button[kind="primary"],
+div.stApp div[class*="st-key-stepbtn_"] button[data-testid="stBaseButton-primary"],
+div.stApp div[class*="st-key-stepbtn_"] button[kind="primary"]:hover,
+div.stApp div[class*="st-key-stepbtn_"] button[data-testid="stBaseButton-primary"]:hover {
+       background: transparent !important; box-shadow: none !important; color: #14532D !important;
+       border: none !important; border-top: 4px solid #2F7A4E !important;}
+div.stApp div[class*="st-key-stepbtn_"] button[kind="primary"] p,
+div.stApp div[class*="st-key-stepbtn_"] button[data-testid="stBaseButton-primary"] p {font-weight: 700 !important;}
+
+/* Back / Next: small flat squares instead of glass circles */
+div.stApp div.st-key-navback button, div.stApp div.st-key-navnext button {
+       width: 46px !important; height: 46px !important; border-radius: 6px !important;
+       background: #FFFFFF !important; border: 1px solid #C9D6CD !important;
+       -webkit-backdrop-filter: none !important; backdrop-filter: none !important;
+       box-shadow: 0 1px 4px rgba(20,83,45,0.18) !important;}
+div.stApp div.st-key-navback button::before, div.stApp div.st-key-navnext button::before {display: none !important;}
+"""
+
+# finished steps: solid green line and green text
+CLEAN_DONE = "".join(
+    "div.stApp div.st-key-stepbtn_%d button, div.stApp div.st-key-stepbtn_%d button:hover "
+    "{border-top-color: #2F7A4E !important; color: #2F7A4E !important; background: transparent !important;}" % (i, i)
+    for i in range(step))
+st.markdown(CLEAN_CSS + CLEAN_DONE + "</style>", unsafe_allow_html=True)
+
 # ---------- DNA helix background ----------
-HELIX_STYLE = "B"   # "A" = CSS 3D helix, "B" = canvas helix, "off" = none
+HELIX_STYLE = "off"   # "A" = CSS 3D helix, "B" = canvas helix, "off" = none
 
 
 def card(label, value, sub="", bad=False, delay=0.0, size=""):
@@ -268,7 +330,7 @@ st.markdown(
     unsafe_allow_html=True)
 
 # click any step directly ...
-pill_cols = st.columns([1, 1, 1, 1, 2.2])[:4]
+pill_cols = st.columns(4)
 for i, name in enumerate(STEPS):
     label = ("✓ " if i < step else "") + "%d · %s" % (i + 1, name)
     pill_cols[i].button(label, key="stepbtn_%d" % i, on_click=jump, args=(i,),
@@ -513,7 +575,9 @@ else:
         show_viewer(pick)
 
 st.markdown('<div class="foot">Educational project · Docking scores are estimates, '
-            'not measurements of drug strength</div>', unsafe_allow_html=True)# ---------- building animation: cursors place each block on the page, from the top ----------
+            'not measurements of drug strength</div>', unsafe_allow_html=True)
+
+# ---------- building animation: cursors place each block on the page, from the top ----------
 ANIM = """
 <script>
 // step __STEP__
@@ -982,7 +1046,7 @@ FX2 = """
 })();
 </script>
 """
-components.html(FX2, height=0)  
+# components.html(FX2, height=0)
 # ---------- extra effects: card spotlight + title shine ----------
 FX = """
 <script>
@@ -1012,4 +1076,4 @@ FX = """
 })();
 </script>
 """
-components.html(FX, height=0)
+# components.html(FX, height=0)
