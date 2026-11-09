@@ -36,7 +36,7 @@ VIEW_DELAY = 2400 if (ANIMATE and arrived) else 150
 
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;0,700;1,500&family=Source+Sans+3:wght@400;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Barlow:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&display=swap');
 [data-testid="stToolbar"], [data-testid="stSidebarNav"], [data-testid="stSidebarCollapseButton"],
 [data-testid="stSidebarCollapsedControl"], [data-testid="collapsedControl"], footer {display: none !important;}
 header[data-testid="stHeader"] {background: transparent;}
