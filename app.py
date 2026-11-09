@@ -227,6 +227,57 @@ div[class*="st-key-stepbtn_"] button[data-testid="stBaseButton-primary"]:hover {
 """
 st.markdown(GLASS_BASE + GLASS_DONE + GLASS_ACTIVE, unsafe_allow_html=True)
 
+# ---------- stepper look for the four step buttons ----------
+STEPPER_CSS = """
+<style>
+div.stApp div[class*="st-key-stepbtn_"] button {
+       position: relative !important; overflow: visible !important;
+       display: flex !important; flex-direction: column !important;
+       align-items: flex-start !important; justify-content: flex-start !important; gap: 8px;
+       height: auto !important; min-height: 0 !important; padding: 0 0 4px 0 !important;
+       background: transparent !important; border: none !important; box-shadow: none !important;
+       border-radius: 0 !important; transform: none !important;
+       -webkit-backdrop-filter: none !important; backdrop-filter: none !important;
+       color: #6B7C70 !important;}
+div.stApp div[class*="st-key-stepbtn_"] button:hover {
+       background: transparent !important; box-shadow: none !important; transform: none !important;
+       color: #1D4D35 !important;}
+div.stApp div[class*="st-key-stepbtn_"] button p {
+       color: inherit !important; font-size: 0.95rem !important; font-weight: 600 !important; margin: 0 !important;}
+
+/* the numbered circle */
+div.stApp div[class*="st-key-stepbtn_"] button::before {
+       content: ""; position: relative !important; left: auto !important; right: auto !important; top: auto !important;
+       display: flex !important; align-items: center; justify-content: center;
+       width: 32px !important; height: 32px !important; border-radius: 50% !important; z-index: 2;
+       background: #FFFFFF !important; border: 2px solid #B8C7BC !important; color: #6B7C70 !important;
+       font-weight: 700; font-size: 0.95rem; box-sizing: border-box;}
+
+/* the line to the next step */
+div.stApp div[class*="st-key-stepbtn_"] button::after {
+       content: ""; position: absolute; top: 15px; left: 40px; width: calc(100% - 32px); height: 2px;
+       background: #CBD6CE; z-index: 1;}
+"""
+
+STEP_STATE = ""
+for i in range(len(STEPS)):
+    sel = "div.stApp div.st-key-stepbtn_" + str(i) + " button"
+    if i < step:
+        STEP_STATE += (sel + ", " + sel + ":hover {color: #2F7A4E !important;} "
+                       + sel + "::before {content: '✓'; background: #2F7A4E !important; "
+                       "border-color: #2F7A4E !important; color: #FFFFFF !important;} "
+                       + sel + "::after {background: #2F7A4E !important;} ")
+    elif i == step:
+        STEP_STATE += (sel + ", " + sel + ":hover {color: #14532D !important;} "
+                       + sel + " p {font-weight: 700 !important;} "
+                       + sel + "::before {content: '" + str(i + 1) + "'; background: #2F7A4E !important; "
+                       "border-color: #2F7A4E !important; color: #FFFFFF !important; "
+                       "box-shadow: 0 0 0 4px rgba(47,122,78,0.18) !important;} ")
+    else:
+        STEP_STATE += sel + "::before {content: '" + str(i + 1) + "';} "
+STEP_STATE += "div.stApp div.st-key-stepbtn_" + str(len(STEPS) - 1) + " button::after {display: none !important;}"
+st.markdown(STEPPER_CSS + STEP_STATE + "</style>", unsafe_allow_html=True)
+
 # ---------- layout sizes for cards (used by the new layouts) ----------
 st.markdown("""
 <style>
@@ -270,7 +321,7 @@ st.markdown(
 # click any step directly ...
 pill_cols = st.columns([1, 1, 1, 1, 2.2])[:4]
 for i, name in enumerate(STEPS):
-    label = ("✓ " if i < step else "") + "%d · %s" % (i + 1, name)
+        label = name + "%d · %s" % (i + 1, name)
     pill_cols[i].button(label, key="stepbtn_%d" % i, on_click=jump, args=(i,),
                         type="primary" if i == step else "secondary")
 
