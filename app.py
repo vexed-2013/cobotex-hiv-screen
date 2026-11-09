@@ -662,7 +662,7 @@ The shaded zone is the rule that was chosen here and then locked: **score ≤ -8
         fig.update_xaxes(range=[-4.5, -12.5])
         fig.update_yaxes(range=[-0.7, 6.7])
         fig.update_traces(marker=dict(size=14, line=dict(width=1, color="#FFFFFF")))
-        fig.update_layout(height=460, paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
+        fig.update_layout(font_family="Barlow", height=460, paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
         st.plotly_chart(fig)
 
 # ---------- step 3: test ----------
